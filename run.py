@@ -289,22 +289,14 @@ def process_line(work: workTime.WorkTime) -> dict[str, int | str | decimal.Decim
         "description": remove_phase_code(work.name),
         "eqip. no.": "56.1077",
         "phase code": get_phase_code(work.name),
-        "SAT ST": 0,
-        "sat ot": 0,
-        "SUN ST": 0,
-        "sun ot": 0,
-        "MON ST": 0,
-        "mon ot": 0,
-        "TUE ST": 0,
-        "tue ot": 0,
-        "WED ST": 0,
-        "wed ot": 0,
-        "THU ST": 0,
-        "thu ot": 0,
-        "FRI ST": 0,
-        "fri ot": 0,
-        "TOT ST": 0,
-        "tot ot": 0,
+        "SAT ST": decimal.Decimal('0'), "sat ot": decimal.Decimal('0'),
+        "SUN ST": decimal.Decimal('0'), "sun ot": decimal.Decimal('0'),
+        "MON ST": decimal.Decimal('0'), "mon ot": decimal.Decimal('0'),
+        "TUE ST": decimal.Decimal('0'), "tue ot": decimal.Decimal('0'),
+        "WED ST": decimal.Decimal('0'), "wed ot": decimal.Decimal('0'),
+        "THU ST": decimal.Decimal('0'), "thu ot": decimal.Decimal('0'),
+        "FRI ST": decimal.Decimal('0'), "fri ot": decimal.Decimal('0'),
+        "TOT ST": decimal.Decimal('0'), "tot ot": decimal.Decimal('0'),
     }
     to_st = decimal.Decimal('0') # total standard time
     to_ot = decimal.Decimal('0') # total over time
@@ -321,13 +313,15 @@ def process_line(work: workTime.WorkTime) -> dict[str, int | str | decimal.Decim
 
         # process to closest 15 min (25% of 60 mins)
         fractional: decimal.Decimal = st % decimal.Decimal('1') # 00 . XX
-        percent: decimal.Decimal = (fractional % decimal.Decimal('0.25'))/decimal.Decimal('0.25')
+        percent: decimal.Decimal = (fractional % decimal.Decimal('0.25'))/decimal.Decimal('0.25') # to next 25%
         if percent != decimal.Decimal("0.0"):
             if percent > decimal.Decimal("0.5"):
                 # move to next 25
-                
+                to_move: decimal.Decimal = decimal.Decimal('1') - percent
+                st += (to_move * decimal.Decimal('0.25'))
             else:
                 # drop to last 25
+                st -= (percent * decimal.Decimal('0.25'))
 
         ot: decimal.Decimal = decimal.Decimal("0") # overtime
         if st > mx_hrs:
