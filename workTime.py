@@ -8,6 +8,24 @@
 
 import datetime
 import decimal
+from decimal import Decimal as D
+
+# csv data example:                                                                         | Class relation:                       |
+# ----------------------------------------------------------------------------------------- | ------------------------------------- |
+# "10.010.0023 Automation Engineer - Overhead  total amount: $110.67  total time: 02:40:00" | WorkTime.name                         |
+#                                                                                           |                                       |
+# "","","Mar 3, 2025"                                                                       | WorkBlock.day | WorkTime.work_blocks  |
+# "Start","End","Time","Amount","Note"                                                      |               |                       |
+# "8:00:00 AM","8:30:00 AM","00:30:00","$20.75",""                                          | ClockLine     | WorkBlock.clock_times |
+# "12:45:00 PM","1:00:00 PM","00:15:00","$10.38",""                                         | ClockLine     | WorkBlock.clock_times |
+# "Total:     00:45:00               $31.13"                                                | FinalLine     | WorkBlock.final_line  |
+#                                                                                           |                                       |
+# "","","Mar 4, 2025"                                                                       | ...
+# "Start","End","Time","Amount","Note"                                                      
+# "8:00:00 AM","9:15:00 AM","01:15:00","$51.88",""
+# "Total:     01:15:00               $51.88"
+#
+# ...                                                                                       | ...
 
 class FinalLine:
     def __init__(self) -> None:
