@@ -173,3 +173,4 @@ cython_debug/
 hidden/*
 .DS_Store
 t.py
+envHidden/*
