@@ -307,7 +307,7 @@ def clean_name(name: str) -> str:
             first_three.append(word)
             if len(first_three) >= 3:
                 break
-            
+
     return " ".join(first_three)
 
 
@@ -357,7 +357,7 @@ def process_line(work: workTime.WorkTime) -> dict[str, int | str | decimal.Decim
             ot = st - mx_hrs
             st = mx_hrs
         ot = ot.normalize()
-        
+
         line[standard_word] = st
         to_st += st
         line[overtime_word] = ot
@@ -366,6 +366,29 @@ def process_line(work: workTime.WorkTime) -> dict[str, int | str | decimal.Decim
     line["tot ot"] = to_ot.normalize()
     return line
 
+
+def run_phase_sheet(headers:list[str],phase_sheet:pandas.DataFrame)
+    # sum line
+    total_line = pandas.Series(index=headers)
+    total_line["description"] = "TOTAL"
+
+    for idx, col_name in enumerate(total_line.index):
+        if idx < 3:
+            continue
+        values: list[decimal.Decimal] = phase_sheet[col_name].dropna().to_list()
+        total_line[col_name] = functools.reduce(lambda x, y: x+y, values)
+
+    # blank row
+    # phase_sheet.loc[len(phase_sheet)] = [None] * len(phase_sheet.columns)
+
+    # adding sum row
+    phase_sheet.loc["Total"] = total_line
+    phase_sheet.replace(to_replace=pandas.NA,value="",inplace=True)
+
+    md = phase_sheet.to_markdown()
+    print(md)
+    with open(file=r"envHidden\export\phase_sheet.md", mode="w", encoding="utf-8") as f:
+        f.write(md)
 
 def run_last_week() -> None:
 
@@ -396,29 +419,13 @@ def run_last_week() -> None:
         phase_sheet.loc[line_no] = line.copy()
         line_no += 1
 
-    # sum line
-    total_line = pandas.Series(index=headers)
-    total_line["description"] = "TOTAL"
+    run_phase_sheet(headers=headers,phase_sheet=phase_sheet)
 
-    for idx, col_name in enumerate(total_line.index):
-        if idx < 3:
-            continue
-        values: list[decimal.Decimal] = phase_sheet[col_name].dropna().to_list()
-        total_line[col_name] = functools.reduce(lambda x, y: x+y, values)
-
-    # blank row
-    # phase_sheet.loc[len(phase_sheet)] = [None] * len(phase_sheet.columns)
-
-    # adding sum row
-    phase_sheet.loc["Total"] = total_line
-    phase_sheet.replace(to_replace=pandas.NA,value="",inplace=True)
-
-    md = phase_sheet.to_markdown()
-    print(md)
-    with open(file=r"envHidden\export\phase_sheet.md", mode="w", encoding="utf-8") as f:
-        f.write(md)
-
-    time_table: pandas.DataFrame = pandas.DataFrame()
+    headers = ["Day","Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"]
+    time_table: pandas.DataFrame = pandas.DataFrame(columns=headers)
+    
+    run_time_table(header=headers,time_table=time_table,work_list=work_times)
+    
 
     return
 
