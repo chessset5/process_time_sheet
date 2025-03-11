@@ -6,13 +6,19 @@
 # @ Description: Processes data from WorkTime
 """
 
-import datetime
 import csv
-import re
-import workTime
+import datetime
 import decimal
-import pandas
 import functools
+import re
+from decimal import Decimal as D
+import string
+import os, sys
+
+import pandas
+
+import workTime
+from envHidden.envSecret import PROCESS_FILES
 
 # pylint: disable=C0301
 # '''
@@ -88,7 +94,8 @@ def parse_am_pm_time(time_str: str) -> datetime.time:
     except Exception as e:
         raise e
 
-def time_string_to_timedelta(time_str:str) -> datetime.timedelta:
+
+def time_string_to_timedelta(time_str: str) -> datetime.timedelta:
     """
     Converts a time string (in the format "HH:MM:SS") into a datetime.timedelta object.
 
@@ -107,7 +114,8 @@ def time_string_to_timedelta(time_str:str) -> datetime.timedelta:
     # Return a timedelta object with the total time
     return datetime.timedelta(hours=hours, minutes=minutes, seconds=seconds)
 
-def timedelta_to_decimal_hours(tdelta:datetime.timedelta) -> decimal.Decimal:
+
+def timedelta_to_decimal_hours(tdelta: datetime.timedelta) -> decimal.Decimal:
     """
     Converts a datetime.timedelta object to decimal hours with higher precision using the decimal library.
 
@@ -123,8 +131,9 @@ def timedelta_to_decimal_hours(tdelta:datetime.timedelta) -> decimal.Decimal:
         Decimal('5.500000')
     """
     # Get total seconds from timedelta and convert to decimal hours
-    total_seconds = decimal.Decimal(tdelta.total_seconds())
-    return total_seconds / decimal.Decimal(3600)  # 3600 seconds in an hour
+    total_seconds = decimal.Decimal(value=tdelta.total_seconds())
+    return total_seconds / decimal.Decimal(value=3600)  # 3600 seconds in an hour
+
 
 def days_ago(days: int = 5) -> datetime.date:
     """
@@ -141,7 +150,7 @@ def days_ago(days: int = 5) -> datetime.date:
     return target_date.date()
 
 
-def get_week_day(date_obj: datetime.datetime) -> str:
+def get_week_day(date_obj: datetime.datetime | datetime.date) -> str:
     """
     Get the name of the day of the week from a datetime object.
 
@@ -267,7 +276,7 @@ def process_csv_file(csv_file: str) -> workTime.WorkTime:
                     second: int = int(time[2])
                     work_block.final_line.total_time = datetime.timedelta(hours=hour, minutes=minute, seconds=second)  # 08:00:00
 
-                    work_block.final_line.total_money = decimal.Decimal(split[2][1:])  # 498.00
+                    work_block.final_line.total_money = decimal.Decimal(value=split[2][1:])  # 498.00
 
                     work_time.work_blocks.append(work_block)
                     not_in_block = True
@@ -276,103 +285,137 @@ def process_csv_file(csv_file: str) -> workTime.WorkTime:
                 # row of a block
                 # ["8:00:00 AM","12:00:00 PM","04:00:00","$249.00","comment"]
                 line: workTime.ClockLine = workTime.ClockLine()
-                line.start_time = parse_am_pm_time(row[0])  # "8:00:00 AM"
-                line.end_time = parse_am_pm_time(row[1])  # "12:00:00 PM"
-                line.total_time = time_string_to_timedelta(row[2])  # "04:00:00"
-                line.money = decimal.Decimal(row[3][1:])  # 249.00
+                line.start_time = parse_am_pm_time(time_str=row[0])  # "8:00:00 AM"
+                line.end_time = parse_am_pm_time(time_str=row[1])  # "12:00:00 PM"
+                line.total_time = time_string_to_timedelta(time_str=row[2])  # "04:00:00"
+                line.money = decimal.Decimal(value=row[3][1:])  # 249.00
                 line.comment = row[4]
     return work_time
 
 
+def clean_name(name: str) -> str:
+    name = name.encode(encoding='ascii', errors='ignore').decode(encoding='ascii')
+    words: list[str] = name.split()
+    first_three: list[str] = list[str]()
+    good_chars: set[str] = set(string.ascii_letters+string.digits+"-.")
+    only_digits:set[str] = set(string.digits+"-.") # including digit separators
+    for word in words:
+        word_set = set(word)
+        if word_set.issubset(only_digits):
+            continue
+        if word_set.issubset(good_chars):
+            first_three.append(word)
+            if len(first_three) >= 3:
+                break
+            
+    return " ".join(first_three)
+
+
 def process_line(work: workTime.WorkTime) -> dict[str, int | str | decimal.Decimal]:
-    line: dict[str, int | str] = {
-        "description": remove_phase_code(work.name),
+    dec_default = "0"
+    line: dict[str, int | str | decimal.Decimal] = {
+        "description": clean_name(name=remove_phase_code(input_string=work.name)),
         "eqip. no.": "56.1077",
         "phase code": get_phase_code(work.name),
-        "SAT ST": decimal.Decimal('0'), "sat ot": decimal.Decimal('0'),
-        "SUN ST": decimal.Decimal('0'), "sun ot": decimal.Decimal('0'),
-        "MON ST": decimal.Decimal('0'), "mon ot": decimal.Decimal('0'),
-        "TUE ST": decimal.Decimal('0'), "tue ot": decimal.Decimal('0'),
-        "WED ST": decimal.Decimal('0'), "wed ot": decimal.Decimal('0'),
-        "THU ST": decimal.Decimal('0'), "thu ot": decimal.Decimal('0'),
-        "FRI ST": decimal.Decimal('0'), "fri ot": decimal.Decimal('0'),
-        "TOT ST": decimal.Decimal('0'), "tot ot": decimal.Decimal('0'),
+        "SAT ST": decimal.Decimal(value=dec_default), "sat ot": decimal.Decimal(value=dec_default),
+        "SUN ST": decimal.Decimal(value=dec_default), "sun ot": decimal.Decimal(value=dec_default),
+        "MON ST": decimal.Decimal(value=dec_default), "mon ot": decimal.Decimal(value=dec_default),
+        "TUE ST": decimal.Decimal(value=dec_default), "tue ot": decimal.Decimal(value=dec_default),
+        "WED ST": decimal.Decimal(value=dec_default), "wed ot": decimal.Decimal(value=dec_default),
+        "THU ST": decimal.Decimal(value=dec_default), "thu ot": decimal.Decimal(value=dec_default),
+        "FRI ST": decimal.Decimal(value=dec_default), "fri ot": decimal.Decimal(value=dec_default),
+        "TOT ST": decimal.Decimal(value=dec_default), "tot ot": decimal.Decimal(value=dec_default),
     }
-    to_st = decimal.Decimal('0') # total standard time
-    to_ot = decimal.Decimal('0') # total over time
+    to_st = decimal.Decimal(value='0')  # total standard time
+    to_ot = decimal.Decimal(value='0')  # total over time
     for block in work.work_blocks:
         if block.day < days_ago(7):
             continue
-        week_day: str = get_week_day(block.day)
-        mx_hrs = decimal.Decimal("8") # max standard hours
-        standard_word: str = week_day.upper()[:3] # short capital week day (standard time)
-        overtime_word: str = standard_word.lower() # short lower week day
-        standard_word += " ST"
-        overtime_word += " ot"
-        st: decimal.Decimal = timedelta_to_decimal_hours(tdelta=block.final_line.total_time) #standard time
+        week_day: str = get_week_day(date_obj=block.day)
+        mx_hrs = decimal.Decimal("8")  # max standard hours
+        standard_word: str = week_day.upper()[:3]  # short capital week day (standard time) "MON"
+        overtime_word: str = standard_word.lower()  # short lower week day "mon"
+        standard_word += " ST" # "MON ST"
+        overtime_word += " ot" # "mon ot"
+        st: decimal.Decimal = timedelta_to_decimal_hours(tdelta=block.final_line.total_time)  # standard time
 
         # process to closest 15 min (25% of 60 mins)
-        fractional: decimal.Decimal = st % decimal.Decimal('1') # 00 . XX
-        percent: decimal.Decimal = (fractional % decimal.Decimal('0.25'))/decimal.Decimal('0.25') # to next 25%
-        if percent != decimal.Decimal("0.0"):
-            if percent > decimal.Decimal("0.5"):
+        fractional: decimal.Decimal = st % decimal.Decimal(value='1')  # 00 . XX
+        percent: decimal.Decimal = (fractional % decimal.Decimal(value='0.25'))/decimal.Decimal(value='0.25')  # to next 25%
+        if percent != decimal.Decimal(value="0.0"):
+            if percent > decimal.Decimal(value="0.5"):
                 # move to next 25
-                to_move: decimal.Decimal = decimal.Decimal('1') - percent
-                st += (to_move * decimal.Decimal('0.25'))
+                to_move: decimal.Decimal = decimal.Decimal(value='1') - percent
+                st += (to_move * decimal.Decimal(value='0.25'))
             else:
                 # drop to last 25
-                st -= (percent * decimal.Decimal('0.25'))
+                st -= (percent * decimal.Decimal(value='0.25'))
 
-        ot: decimal.Decimal = decimal.Decimal("0") # overtime
+        st = st.normalize()
+        ot: decimal.Decimal = decimal.Decimal(value="0")  # overtime
         if st > mx_hrs:
             ot = st - mx_hrs
             st = mx_hrs
-        for key in line:
-            if key == standard_word:
-                line[key] = st
-                to_st += st
-                continue
-            if key == overtime_word:
-                line[key] = ot
-                to_ot += ot
-    line["TOT ST"] = to_st
-    line["tot ot"] = to_ot
+        ot = ot.normalize()
+        
+        line[standard_word] = st
+        to_st += st
+        line[overtime_word] = ot
+        to_ot += ot
+    line["TOT ST"] = to_st.normalize()
+    line["tot ot"] = to_ot.normalize()
     return line
-
-
 
 
 def run_last_week() -> None:
 
+    # Define the header
     headers: list[str] = ["description", "eqip. no.", "phase code", "SAT ST", "sat ot", "SUN ST", "sun ot", "MON ST", "mon ot", "TUE ST", "tue ot", "WED ST", "wed ot", "THU ST", "thu ot", "FRI ST", "fri ot", "TOT ST", "tot ot"]
-    phase_sheet: pandas.DataFrame = pandas.DataFrame(columns=headers)
+
+    # Define the index
+    index: list[str | int] = list(range(23)) + ["PTO", "Holiday", "Jury", "Bereavement", "Sick", "Total"]  # [0,...,22,"PTO",...,"Total"]
+
+    # Create an empty DataFrame with the specified header and index
+    phase_sheet: pandas.DataFrame = pandas.DataFrame(columns=headers, index=index)
+
+    # Set the values for 'description', 'eqip. no.' and 'phase code' for rows 'PTO' to 'Bereavement'
+    phase_sheet.loc["PTO":"Bereavement", ["eqip. no.", "phase code"]] = ["56.1077", "10.010.0023"]
+    phase_sheet.loc["PTO", "description"] = "PTO"
+    phase_sheet.loc["Holiday", "description"] = "Holiday"
+    phase_sheet.loc["Jury", "description"] = "Jury Duty"
+    phase_sheet.loc["Bereavement", "description"] = "Bereavement"
+    phase_sheet.loc["Sick", "description"] = "*Sick Reserve (Salaried)"
 
     work_times: list[workTime.WorkTime] = list[workTime.WorkTime]()
-    for csv_file in [r"hidden/data/to_process/10.010.0023 - Data Mar 3, 2025 - Mar 9, 2025.csv", r"hidden/data/to_process/10.010.0033 - Data Mar 3, 2025 - Mar 9, 2025.csv"]:
+    line_no = 0
+    for csv_file in PROCESS_FILES:
         work: workTime.WorkTime = process_csv_file(csv_file)
         work_times.append(work)
 
         line: dict[str, int | str | decimal.Decimal] = process_line(work)
-        phase_sheet.loc[len(phase_sheet)] = line.copy()
+        phase_sheet.loc[line_no] = line.copy()
+        line_no += 1
 
     # sum line
-    sum_line = pandas.Series(index=headers)
+    total_line = pandas.Series(index=headers)
+    total_line["description"] = "TOTAL"
 
-    for idx, head in enumerate(sum_line.index):
+    for idx, col_name in enumerate(total_line.index):
         if idx < 3:
             continue
-        values:list[decimal.Decimal] = phase_sheet[head].to_list()
-        sum_line[head] = functools.reduce(lambda x, y : x+y,values)
+        values: list[decimal.Decimal] = phase_sheet[col_name].dropna().to_list()
+        total_line[col_name] = functools.reduce(lambda x, y: x+y, values)
 
     # blank row
-    phase_sheet.loc[len(phase_sheet)] = [None] * len(phase_sheet.columns)
+    # phase_sheet.loc[len(phase_sheet)] = [None] * len(phase_sheet.columns)
 
     # adding sum row
-    phase_sheet.loc[len(phase_sheet)] = sum_line
+    phase_sheet.loc["Total"] = total_line
+    phase_sheet.replace(to_replace=pandas.NA,value="",inplace=True)
 
     md = phase_sheet.to_markdown()
     print(md)
-    with open(r"hidden/export/phase_sheet.md",mode="w",encoding="utf-8") as f:
+    with open(file=r"envHidden\export\phase_sheet.md", mode="w", encoding="utf-8") as f:
         f.write(md)
 
     time_table: pandas.DataFrame = pandas.DataFrame()
