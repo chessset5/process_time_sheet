@@ -1,11 +1,12 @@
 
 import datetime
+import os
 from collections import defaultdict
 
 import pandas
 
 import workTime
-from helper_functions import get_week_day, time_to_12_string, is_30_minutes_apart
+from helper_functions import get_week_day, is_minutes_apart, time_to_12_string
 
 
 def proc_table(work_list: list[workTime.WorkTime]) -> None:
@@ -40,11 +41,6 @@ def proc_table(work_list: list[workTime.WorkTime]) -> None:
     table_df = pandas.DataFrame(columns=header, index=index)
     table_df.rename_axis(mapper="Day", axis="columns", inplace=True)
 
-    # set break cells to automatic yes
-    for i in header:
-        for b_i in breaks_idxs:
-            table_df[i, b_i] = "yes"
-
     # loading times
     punches: defaultdict[str, list[datetime.datetime]] = defaultdict(list[datetime.datetime])
     for wt in work_list:
@@ -57,6 +53,13 @@ def proc_table(work_list: list[workTime.WorkTime]) -> None:
                 if clock.end_time != datetime.time():
                     punches[short_day].append(clock.end_time)
 
+    # set break cells to automatic yes
+    for i in header:
+        if len(punches[i])>0:
+            for b_i in breaks_idxs:
+                #  row, col
+                table_df.loc[b_i, i] = "yes"
+
     # process times into dataframe
     for day, time_list in punches.items():
         i = 0
@@ -66,10 +69,10 @@ def proc_table(work_list: list[workTime.WorkTime]) -> None:
         table_df[day, punch_idxs[i]] = time_str
         i += 1
         for next_time in time_list:
-            if is_30_minutes_apart(time1=cur_time, time2=next_time):
+            if is_minutes_apart(time1=cur_time, time2=next_time, minutes=2):
                 cur_time = next_time
                 time_str: str = time_to_12_string(time=cur_time)
-                table_df[day, punch_idxs[i]] = time_str
+                table_df.loc[day, punch_idxs[i]] = time_str
                 i += 1
             else:
                 # under 30 minutes, assume the same time/break
@@ -77,5 +80,12 @@ def proc_table(work_list: list[workTime.WorkTime]) -> None:
 
     md: str = table_df.to_markdown()
     print(md)
-    with open(r"hidden/export/time_table.md", mode="w", encoding="utf-8") as f:
+    print()
+
+    md_file: str = ""
+    if os.name == "nt":  # Windows
+        md_file = r"./envHidden/export/time_table.md"
+    elif os.name == "posix":  # Linux/macOS
+        md_file = r"./envHidden/export/time_table.md"
+    with open(file=md_file, mode="w", encoding="utf-8") as f:
         f.write(md)

@@ -83,7 +83,14 @@ def run_phase_sheet(headers: list[str], phase_sheet: pandas.DataFrame) -> None:
 
     md = phase_sheet.to_markdown()
     print(md)
-    with open(file=r"envHidden\export\phase_sheet.md", mode="w", encoding="utf-8") as f:
+    print()
+
+    md_file:str = ""
+    if os.name == "nt":  # Windows
+        md_file = r"./envHidden/export/phase_sheet.md"
+    elif os.name == "posix":  # Linux/macOS
+        md_file = r"./envHidden/export/phase_sheet.md"
+    with open(file=md_file, mode="w", encoding="utf-8") as f:
         f.write(md)
 
 
@@ -110,7 +117,12 @@ def proces_time_card() -> None:
     line_no = 0
 
     folder_path = r"envHidden/data/to_process"
-    csv_files: list[str] = [f for f in os.listdir(folder_path) if f.endswith(".csv")]
+    csv_files: list[str] = []
+    for f in os.listdir(folder_path):
+        if f.endswith(".csv"):
+            path: str = os.path.normpath(os.path.join(folder_path,f))
+            path: str = os.path.abspath(path)
+            csv_files.append(path)
     for csv_file in csv_files:
         work: workTime.WorkTime = process_csv_file(csv_file)
         work_times.append(work)
@@ -119,10 +131,11 @@ def proces_time_card() -> None:
         phase_sheet.loc[line_no] = line.copy()
         line_no += 1
 
-    with ThreadPoolExecutor() as e:
-        e.submit(run_phase_sheet(headers=headers, phase_sheet=phase_sheet))
-        e.submit(proc_table(work_list=work_times))
-
+    # with ThreadPoolExecutor() as e:
+    #     e.submit(run_phase_sheet(headers=headers, phase_sheet=phase_sheet))
+    #     e.submit(proc_table(work_list=work_times))
+    (run_phase_sheet(headers=headers, phase_sheet=phase_sheet))
+    (proc_table(work_list=work_times))
     return
 
 

@@ -7,8 +7,9 @@ import string
 
 import workTime
 
+DAYS_AGO = False
 
-def is_30_minutes_apart(time1: datetime.time, time2: datetime.time) -> bool:
+def is_minutes_apart(time1: datetime.time, time2: datetime.time, minutes:int = 30) -> bool:
     """
     Checks if the difference between two datetime.time objects is exactly 30 minutes.
 
@@ -31,7 +32,7 @@ def is_30_minutes_apart(time1: datetime.time, time2: datetime.time) -> bool:
     dt2: datetime.datetime = datetime.datetime.combine(dummy_date, time2)
 
     # 29 minuets for a 1 minute delta
-    return abs(dt1 - dt2) == datetime.timedelta(minutes=29)
+    return abs(dt1 - dt2) == datetime.timedelta(minutes=minutes)
 
 
 def time_to_12_string(time: datetime.time | datetime.datetime) -> str:
@@ -318,8 +319,9 @@ def process_line(work: workTime.WorkTime) -> dict[str, int | str | decimal.Decim
     to_st = decimal.Decimal(value='0')  # total standard time
     to_ot = decimal.Decimal(value='0')  # total over time
     for block in work.work_blocks:
-        if block.day < days_ago(7):
-            continue
+        if DAYS_AGO:
+            if block.day < days_ago(7):
+                continue
         week_day: str = get_week_day(date_obj=block.day)
         mx_hrs = decimal.Decimal("8")  # max standard hours
         standard_word: str = week_day.upper()[:3]  # short capital week day (standard time) "MON"
