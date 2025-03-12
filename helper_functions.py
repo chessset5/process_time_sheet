@@ -1,11 +1,32 @@
 
-import datetime
 import csv
-import re
-import workTime
+import datetime
 import decimal
-import pandas
-import functools
+import re
+import string
+
+import workTime
+
+
+def time_to_12_string(time: datetime.time | datetime.datetime) -> str:
+    """
+    Converts a datetime.time or datetime.datetime object to a 12-hour formatted string.
+
+    Args:
+        time (datetime.time | datetime.datetime): The time or datetime object to format.
+
+    Returns:
+        str: The formatted time string in "HH:MM AM/PM" format.
+
+    Example:
+        >>> from datetime import datetime, time
+        >>> time_to_12_string(datetime(2024, 3, 11, 14, 30))
+        '02:30 PM'
+        >>> time_to_12_string(time(9, 15))
+        '09:15 AM'
+    """
+    return time.strftime(format="%I:%M %p")
+
 
 def parse_date(date_str: str) -> datetime.datetime:
     """
@@ -36,7 +57,8 @@ def parse_am_pm_time(time_str: str) -> datetime.time:
     except Exception as e:
         raise e
 
-def time_string_to_timedelta(time_str:str) -> datetime.timedelta:
+
+def time_string_to_timedelta(time_str: str) -> datetime.timedelta:
     """
     Converts a time string (in the format "HH:MM:SS") into a datetime.timedelta object.
 
@@ -55,7 +77,8 @@ def time_string_to_timedelta(time_str:str) -> datetime.timedelta:
     # Return a timedelta object with the total time
     return datetime.timedelta(hours=hours, minutes=minutes, seconds=seconds)
 
-def timedelta_to_decimal_hours(tdelta:datetime.timedelta) -> decimal.Decimal:
+
+def timedelta_to_decimal_hours(tdelta: datetime.timedelta) -> decimal.Decimal:
     """
     Converts a datetime.timedelta object to decimal hours with higher precision using the decimal library.
 
@@ -71,8 +94,9 @@ def timedelta_to_decimal_hours(tdelta:datetime.timedelta) -> decimal.Decimal:
         Decimal('5.500000')
     """
     # Get total seconds from timedelta and convert to decimal hours
-    total_seconds = decimal.Decimal(tdelta.total_seconds())
-    return total_seconds / decimal.Decimal(3600)  # 3600 seconds in an hour
+    total_seconds = decimal.Decimal(value=tdelta.total_seconds())
+    return total_seconds / decimal.Decimal(value=3600)  # 3600 seconds in an hour
+
 
 def days_ago(days: int = 5) -> datetime.date:
     """
@@ -89,7 +113,7 @@ def days_ago(days: int = 5) -> datetime.date:
     return target_date.date()
 
 
-def get_week_day(date_obj: datetime.datetime) -> str:
+def get_week_day(date_obj: datetime.datetime | datetime.date) -> str:
     """
     Get the name of the day of the week from a datetime object.
 
@@ -215,7 +239,7 @@ def process_csv_file(csv_file: str) -> workTime.WorkTime:
                     second: int = int(time[2])
                     work_block.final_line.total_time = datetime.timedelta(hours=hour, minutes=minute, seconds=second)  # 08:00:00
 
-                    work_block.final_line.total_money = decimal.Decimal(split[2][1:])  # 498.00
+                    work_block.final_line.total_money = decimal.Decimal(value=split[2][1:])  # 498.00
 
                     work_time.work_blocks.append(work_block)
                     not_in_block = True
@@ -224,9 +248,83 @@ def process_csv_file(csv_file: str) -> workTime.WorkTime:
                 # row of a block
                 # ["8:00:00 AM","12:00:00 PM","04:00:00","$249.00","comment"]
                 line: workTime.ClockLine = workTime.ClockLine()
-                line.start_time = parse_am_pm_time(row[0])  # "8:00:00 AM"
-                line.end_time = parse_am_pm_time(row[1])  # "12:00:00 PM"
-                line.total_time = time_string_to_timedelta(row[2])  # "04:00:00"
-                line.money = decimal.Decimal(row[3][1:])  # 249.00
+                line.start_time = parse_am_pm_time(time_str=row[0])  # "8:00:00 AM"
+                line.end_time = parse_am_pm_time(time_str=row[1])  # "12:00:00 PM"
+                line.total_time = time_string_to_timedelta(time_str=row[2])  # "04:00:00"
+                line.money = decimal.Decimal(value=row[3][1:])  # 249.00
                 line.comment = row[4]
     return work_time
+
+
+def clean_name(name: str) -> str:
+    name = name.encode(encoding='ascii', errors='ignore').decode(encoding='ascii')
+    words: list[str] = name.split()
+    first_three: list[str] = list[str]()
+    good_chars: set[str] = set(string.ascii_letters + string.digits + "-.")
+    only_digits: set[str] = set(string.digits + "-.")  # including digit separators
+    for word in words:
+        word_set = set(word)
+        if word_set.issubset(only_digits):
+            continue
+        if word_set.issubset(good_chars):
+            first_three.append(word)
+            if len(first_three) >= 3:
+                break
+
+    return " ".join(first_three)
+
+
+def process_line(work: workTime.WorkTime) -> dict[str, int | str | decimal.Decimal]:
+    dec_default = "0"
+    line: dict[str, int | str | decimal.Decimal] = {
+        "description": clean_name(name=remove_phase_code(input_string=work.name)),
+        "eqip. no.": "56.1077",
+        "phase code": get_phase_code(work.name),
+        "SAT ST": decimal.Decimal(value=dec_default), "sat ot": decimal.Decimal(value=dec_default),
+        "SUN ST": decimal.Decimal(value=dec_default), "sun ot": decimal.Decimal(value=dec_default),
+        "MON ST": decimal.Decimal(value=dec_default), "mon ot": decimal.Decimal(value=dec_default),
+        "TUE ST": decimal.Decimal(value=dec_default), "tue ot": decimal.Decimal(value=dec_default),
+        "WED ST": decimal.Decimal(value=dec_default), "wed ot": decimal.Decimal(value=dec_default),
+        "THU ST": decimal.Decimal(value=dec_default), "thu ot": decimal.Decimal(value=dec_default),
+        "FRI ST": decimal.Decimal(value=dec_default), "fri ot": decimal.Decimal(value=dec_default),
+        "TOT ST": decimal.Decimal(value=dec_default), "tot ot": decimal.Decimal(value=dec_default),
+    }
+    to_st = decimal.Decimal(value='0')  # total standard time
+    to_ot = decimal.Decimal(value='0')  # total over time
+    for block in work.work_blocks:
+        if block.day < days_ago(7):
+            continue
+        week_day: str = get_week_day(date_obj=block.day)
+        mx_hrs = decimal.Decimal("8")  # max standard hours
+        standard_word: str = week_day.upper()[:3]  # short capital week day (standard time) "MON"
+        overtime_word: str = standard_word.lower()  # short lower week day "mon"
+        standard_word += " ST"  # "MON ST"
+        overtime_word += " ot"  # "mon ot"
+        st: decimal.Decimal = timedelta_to_decimal_hours(tdelta=block.final_line.total_time)  # standard time
+
+        # process to closest 15 min (25% of 60 mins)
+        fractional: decimal.Decimal = st % decimal.Decimal(value='1')  # 00 . XX
+        percent: decimal.Decimal = (fractional % decimal.Decimal(value='0.25')) / decimal.Decimal(value='0.25')  # to next 25%
+        if percent != decimal.Decimal(value="0.0"):
+            if percent > decimal.Decimal(value="0.5"):
+                # move to next 25
+                to_move: decimal.Decimal = decimal.Decimal(value='1') - percent
+                st += (to_move * decimal.Decimal(value='0.25'))
+            else:
+                # drop to last 25
+                st -= (percent * decimal.Decimal(value='0.25'))
+
+        st = st.normalize()
+        ot: decimal.Decimal = decimal.Decimal(value="0")  # overtime
+        if st > mx_hrs:
+            ot = st - mx_hrs
+            st = mx_hrs
+        ot = ot.normalize()
+
+        line[standard_word] = st
+        to_st += st
+        line[overtime_word] = ot
+        to_ot += ot
+    line["TOT ST"] = to_st.normalize()
+    line["tot ot"] = to_ot.normalize()
+    return line
