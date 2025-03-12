@@ -1,30 +1,15 @@
 
 import datetime
-import csv
-import re
-import workTime
-import decimal
+from collections import defaultdict
+
 import pandas
-import functools
 
-from helper_funs import (
-    parse_am_pm_time, 
-    parse_date, 
-    get_phase_code, 
-    remove_phase_code, 
-    time_string_to_timedelta, 
-    timedelta_to_decimal_hours, 
-    get_week_day,
-                         )
+import workTime
+from helper_functions import get_week_day, time_to_12_string, is_30_minutes_apart
 
 
-from workTime import WorkTime as WT
-from pandas import DataFrame as DF
-
-
-def proc_table(work_times: list[workTime.WorkTime]) -> None:
+def proc_table(work_list: list[workTime.WorkTime]) -> None:
     header: list[str] = [
-        "Day",
         "Sat",
         "Sun",
         "Mon",
@@ -41,17 +26,56 @@ def proc_table(work_times: list[workTime.WorkTime]) -> None:
         "Lunch In",
         "PM Rest Break (yes)",
         "Time Out",
+        " ... ",
+        "2nd Lunch Out",
+        "2nd Lunch In",
+        "2nd PM Rest Break (yes)",
+        "Time Out",
     ]
 
-    table_df = DF(columns=header, index=index)
-    data = dict[str, list[datetime.datetime]]()
+    # only punch ins
+    punch_idxs: list[str] = [i for i in index if (not "Break" in i) and (not "..." in i)]
+    breaks_idxs: list[str] = [i for i in index if ("Break" in i)]
 
-    for wt in work_times:
+    table_df = pandas.DataFrame(columns=header, index=index)
+    table_df.rename_axis(mapper="Day", axis="columns", inplace=True)
+
+    # set break cells to automatic yes
+    for i in header:
+        for b_i in breaks_idxs:
+            table_df[i, b_i] = "yes"
+
+    # loading times
+    punches: defaultdict[str, list[datetime.datetime]] = defaultdict(list[datetime.datetime])
+    for wt in work_list:
         for block in wt.work_blocks:
-            # if get
-            get_week_day(block.day)
+            day: str = get_week_day(date_obj=block.day)
+            short_day: str = day[:3]
+            for clock in block.clock_times:
+                if clock.start_time != datetime.time():
+                    punches[short_day].append(clock.start_time)
+                if clock.end_time != datetime.time():
+                    punches[short_day].append(clock.end_time)
 
-    md = table_df.to_markdown()
+    # process times into dataframe
+    for day, time_list in punches.items():
+        i = 0
+        time_list.sort()
+        cur_time: datetime.datetime = time_list.pop(index=0)  # start time
+        time_str: str = time_to_12_string(time=cur_time)
+        table_df[day, punch_idxs[i]] = time_str
+        i += 1
+        for next_time in time_list:
+            if is_30_minutes_apart(time1=cur_time, time2=next_time):
+                cur_time = next_time
+                time_str: str = time_to_12_string(time=cur_time)
+                table_df[day, punch_idxs[i]] = time_str
+                i += 1
+            else:
+                # under 30 minutes, assume the same time/break
+                cur_time = next_time
+
+    md: str = table_df.to_markdown()
     print(md)
     with open(r"hidden/export/time_table.md", mode="w", encoding="utf-8") as f:
         f.write(md)
