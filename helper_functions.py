@@ -8,6 +8,32 @@ import string
 import workTime
 
 
+def is_30_minutes_apart(time1: datetime.time, time2: datetime.time) -> bool:
+    """
+    Checks if the difference between two datetime.time objects is exactly 30 minutes.
+
+    Args:
+        time1 (datetime.time): The first time object.
+        time2 (datetime.time): The second time object.
+
+    Returns:
+        bool: True if the difference is exactly 30 minutes, False otherwise.
+
+    Example:
+        >>> from datetime import time
+        >>> is_30_minutes_apart(time(14, 0), time(14, 30))
+        True
+        >>> is_30_minutes_apart(time(9, 0), time(9, 45))
+        False
+    """
+    dummy_date: datetime.date = datetime.datetime.today().date()  # Use the same arbitrary date
+    dt1: datetime.datetime = datetime.datetime.combine(dummy_date, time1)
+    dt2: datetime.datetime = datetime.datetime.combine(dummy_date, time2)
+
+    # 29 minuets for a 1 minute delta
+    return abs(dt1 - dt2) == datetime.timedelta(minutes=29)
+
+
 def time_to_12_string(time: datetime.time | datetime.datetime) -> str:
     """
     Converts a datetime.time or datetime.datetime object to a 12-hour formatted string.
