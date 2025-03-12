@@ -8,7 +8,6 @@
 
 import datetime
 import decimal
-from decimal import Decimal as D
 
 # csv data example:                                                                         | Class relation:                       |
 # ----------------------------------------------------------------------------------------- | ------------------------------------- |
@@ -21,17 +20,19 @@ from decimal import Decimal as D
 # "Total:     00:45:00               $31.13"                                                | FinalLine     | WorkBlock.final_line  |
 #                                                                                           |                                       |
 # "","","Mar 4, 2025"                                                                       | ...
-# "Start","End","Time","Amount","Note"                                                      
+# "Start","End","Time","Amount","Note"
 # "8:00:00 AM","9:15:00 AM","01:15:00","$51.88",""
 # "Total:     01:15:00               $51.88"
 #
 # ...                                                                                       | ...
+
 
 class FinalLine:
     def __init__(self) -> None:
         self.line: str = str()
         self.total_time: datetime.timedelta = datetime.timedelta()
         self.total_money: decimal.Decimal = decimal.Decimal(0)
+
 
 class ClockLine:
     def __init__(self) -> None:
@@ -41,14 +42,15 @@ class ClockLine:
         self.money: decimal.Decimal = decimal.Decimal(0)
         self.comment: str = str()
 
+
 class WorkBlock:
     def __init__(self) -> None:
-        self.day: datetime.date = datetime.date(year=2000,month=1,day=1)
+        self.day: datetime.date = datetime.date(year=2000, month=1, day=1)
         self.clock_times: list[ClockLine] = []
         self.final_line: FinalLine = FinalLine()
+
 
 class WorkTime:
     def __init__(self) -> None:
         self.name: str = str()
         self.work_blocks: list[WorkBlock] = list[WorkBlock]()
-
