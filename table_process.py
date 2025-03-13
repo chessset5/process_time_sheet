@@ -55,13 +55,6 @@ def proc_table(work_list: list[workTime.WorkTime]) -> None:
                 if clock.end_time != datetime.time():
                     punches[short_day].append(clock.end_time)
 
-    # set break cells to automatic yes
-    for i in header:
-        if len(punches[i])>0:
-            for b_i in breaks_idxs:
-                #  row, col
-                table_df.loc[b_i, i] = "yes"
-
     # process times into dataframe
     for day, time_list in punches.items():
         if not time_list:
@@ -85,12 +78,17 @@ def proc_table(work_list: list[workTime.WorkTime]) -> None:
                 dyn_list.append(time_to_12_string(t))
 
 
+        # updating the day's breaks
+        break_list: list[str] = ["yes"] * (len(dyn_list)//2) # number of breaks is punches // 2
+        break_list = break_list + [None] * (len(breaks_idxs) - len(break_list))
+        breaks_series = pandas.Series(break_list,index=breaks_idxs)
+        table_df[day].update(breaks_series)
+
+
+        # updating the day's punch in time
         dyn_list: list[str | None] = dyn_list + [None] * (len(punch_idxs) - len(dyn_list))
-
-        values_series = pandas.Series(dyn_list, index=punch_idxs)
-
-        # table_df.loc[punch_idxs,day]=dyn_list
-        table_df[day].update(values_series)
+        dyn_series = pandas.Series(dyn_list, index=punch_idxs)
+        table_df[day].update(dyn_series)
 
     table_df.replace(pandas.NA,None,inplace=True)
     table_df.loc[" ... "] = " ... "
