@@ -67,9 +67,9 @@ def proc_table(work_list: list[workTime.WorkTime]) -> None:
         if not time_list:
             continue
         time_list.sort()
-        time_list = list(map(time_to_12_string,time_list))
-        seen = set()
-        dyn_list: list[str] =  [x for x in time_list if not (x in seen or seen.add(x))]
+        dyn_list = list(map(time_to_12_string,time_list))
+        # seen = set()
+        # dyn_list: list[str] =  [x for x in dyn_list if not (x in seen or seen.add(x))]
         if len(dyn_df) < len(dyn_list):
             dyn_df.reindex(range(len(dyn_list)))
         dyn_df[day] = dyn_list + [None] * (len(dyn_df) - len(dyn_list))
