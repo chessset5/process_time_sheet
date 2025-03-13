@@ -31,15 +31,15 @@ def proc_table(work_list: list[workTime.WorkTime]) -> None:
         "2nd Lunch Out",
         "2nd Lunch In",
         "2nd PM Rest Break (yes)",
-        "Time Out",
+        "Time Out (10hr)",
     ]
 
     # only punch ins
-    punch_idxs: list[str] = [i for i in index if (not "Break" in i) and (not "..." in i)]
-    breaks_idxs: list[str] = [i for i in index if ("Break" in i)]
+    punch_idxs: list[str] = [i for i in index if (not "Break" in i) and (not "..." in i)] # time in
+    breaks_idxs: list[str] = [i for i in index if ("Break" in i)] # rest breaks
 
     table_df = pandas.DataFrame(columns=header, index=index)
-    table_df.rename_axis(mapper="Day", axis="columns", inplace=True)
+    # table_df.rename_axis(mapper="Day", axis="columns", inplace=True)
 
     dyn_df = pandas.DataFrame(columns=header)
 
@@ -67,13 +67,34 @@ def proc_table(work_list: list[workTime.WorkTime]) -> None:
         if not time_list:
             continue
         time_list.sort()
-        dyn_list = list(map(time_to_12_string,time_list))
-        # seen = set()
-        # dyn_list: list[str] =  [x for x in dyn_list if not (x in seen or seen.add(x))]
+
+        time_slot: dict[datetime.datetime,int] = {}
+        for t in time_list:
+            time_slot[t] = time_slot.get(t,0) + 1
+
+        dyn_list = list(map(time_to_12_string,time_slot))
         if len(dyn_df) < len(dyn_list):
             dyn_df.reindex(range(len(dyn_list)))
         dyn_df[day] = dyn_list + [None] * (len(dyn_df) - len(dyn_list))
 
+        dyn_list:list[str] = []
+        for t, i in time_slot.items():
+            if i > 1:
+                pass
+            else:
+                dyn_list.append(time_to_12_string(t))
+
+
+        dyn_list: list[str | None] = dyn_list + [None] * (len(punch_idxs) - len(dyn_list))
+
+        values_series = pandas.Series(dyn_list, index=punch_idxs)
+
+        # table_df.loc[punch_idxs,day]=dyn_list
+        table_df[day].update(values_series)
+
+    table_df.replace(pandas.NA,None,inplace=True)
+    table_df.loc[" ... "] = " ... "
+    dyn_df.replace(pandas.NA,None,inplace=True)
 
     md: str = table_df.to_markdown()
     print(md)
