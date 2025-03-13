@@ -94,7 +94,7 @@ def run_phase_sheet(headers: list[str], phase_sheet: pandas.DataFrame) -> None:
         f.write(md)
 
 
-def proces_time_card() -> None:
+def process_time_card() -> None:
 
     # Define the header
     headers: list[str] = ["description", "eqip. no.", "phase code", "SAT ST", "sat ot", "SUN ST", "sun ot", "MON ST", "mon ot", "TUE ST", "tue ot", "WED ST", "wed ot", "THU ST", "thu ot", "FRI ST", "fri ot", "TOT ST", "tot ot"]
@@ -140,7 +140,7 @@ def proces_time_card() -> None:
 
 
 def main() -> None:
-    proces_time_card()
+    process_time_card()
     return
 
 

@@ -280,6 +280,7 @@ def process_csv_file(csv_file: str) -> workTime.WorkTime:
                 line.total_time = time_string_to_timedelta(time_str=row[2])  # "04:00:00"
                 line.money = decimal.Decimal(value=row[3][1:])  # 249.00
                 line.comment = row[4]
+                work_block.clock_times.append(line)
     return work_time
 
 
