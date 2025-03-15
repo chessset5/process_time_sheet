@@ -85,11 +85,8 @@ def run_phase_sheet(headers: list[str], phase_sheet: pandas.DataFrame) -> None:
     print(md)
     print()
 
-    md_file:str = ""
-    if os.name == "nt":  # Windows
-        md_file = r"./envHidden/export/phase_sheet.md"
-    elif os.name == "posix":  # Linux/macOS
-        md_file = r"./envHidden/export/phase_sheet.md"
+    md_file = r"./envHidden/export/phase_sheet.md"
+    md_file = os.path.normpath(md_file)
     with open(file=md_file, mode="w", encoding="utf-8") as f:
         f.write(md)
 
@@ -97,16 +94,46 @@ def run_phase_sheet(headers: list[str], phase_sheet: pandas.DataFrame) -> None:
 def process_time_card() -> None:
 
     # Define the header
-    headers: list[str] = ["description", "eqip. no.", "phase code", "SAT ST", "sat ot", "SUN ST", "sun ot", "MON ST", "mon ot", "TUE ST", "tue ot", "WED ST", "wed ot", "THU ST", "thu ot", "FRI ST", "fri ot", "TOT ST", "tot ot"]
+    headers: list[str] = [
+        "description",
+        "eqip. no.",
+        "phase code",
+        "SAT ST",
+        "sat ot",
+        "SUN ST",
+        "sun ot",
+        "MON ST",
+        "mon ot",
+        "TUE ST",
+        "tue ot",
+        "WED ST",
+        "wed ot",
+        "THU ST",
+        "thu ot",
+        "FRI ST",
+        "fri ot",
+        "TOT ST",
+        "tot ot",
+    ]
 
     # Define the index
-    index: list[str | int] = list(range(23)) + ["PTO", "Holiday", "Jury", "Bereavement", "Sick", "Total"]  # [0,...,22,"PTO",...,"Total"]
+    index: list[str | int] = list(range(23)) + [
+        "PTO",
+        "Holiday",
+        "Jury",
+        "Bereavement",
+        "Sick",
+        "Total",
+    ]  # [0,...,22,"PTO",...,"Total"]
 
     # Create an empty DataFrame with the specified header and index
     phase_sheet: pandas.DataFrame = pandas.DataFrame(columns=headers, index=index)
 
     # Set the values for 'description', 'eqip. no.' and 'phase code' for rows 'PTO' to 'Bereavement'
-    phase_sheet.loc["PTO":"Bereavement", ["eqip. no.", "phase code"]] = ["56.1077", "10.010.0023"]
+    phase_sheet.loc["PTO":"Bereavement", ["eqip. no.", "phase code"]] = [
+        "56.1077",
+        "10.010.0023",
+    ]
     phase_sheet.loc["PTO", "description"] = "PTO"
     phase_sheet.loc["Holiday", "description"] = "Holiday"
     phase_sheet.loc["Jury", "description"] = "Jury Duty"
@@ -120,7 +147,7 @@ def process_time_card() -> None:
     csv_files: list[str] = []
     for f in os.listdir(folder_path):
         if f.endswith(".csv"):
-            path: str = os.path.normpath(os.path.join(folder_path,f))
+            path: str = os.path.normpath(os.path.join(folder_path, f))
             path: str = os.path.abspath(path)
             csv_files.append(path)
     for csv_file in csv_files:
@@ -128,7 +155,7 @@ def process_time_card() -> None:
         work_times.append(work)
 
         line: dict[str, int | str | decimal.Decimal] = process_line(work)
-        phase_sheet.loc[line_no] = line.copy()
+        phase_sheet.loc[line_no] = line.copy()  # pyright: ignore
         line_no += 1
 
     # with ThreadPoolExecutor() as e:
