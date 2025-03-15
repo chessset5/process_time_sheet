@@ -47,10 +47,9 @@ def proc_table(work_list: list[workTime.WorkTime]) -> None:
     punches: defaultdict[str, list[datetime.time]] = defaultdict(list[datetime.time])
     for wt in work_list:
         for block in wt.work_blocks:
-            # TODO: MAKE THIS WORK!!
-            # if DAYS_AGO:
-            #     if block.day < days_ago(7):
-            #         continue
+            if DAYS_AGO:
+                if block.day < days_ago(7):
+                    continue
             day: str = get_week_day(date_obj=block.day)
             short_day: str = day[:3]
             for clock in block.clock_times:
