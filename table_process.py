@@ -48,13 +48,21 @@ def proc_table(work_list: list[workTime.WorkTime]) -> None:
     for wt in work_list:
         for block in wt.work_blocks:
             if DAYS_AGO:
-                if block.day < days_ago(7):
+                if block.day > days_ago(7):
                     continue
             day: str = get_week_day(date_obj=block.day)
             short_day: str = day[:3]
             for clock in block.clock_times:
                 punches[short_day].append(clock.start_time)
                 punches[short_day].append(clock.end_time)
+                
+    for day in punches:
+        t = punches[day]
+        t = set(t)
+        t = list(t)
+        t.sort()
+        t = list(map(time_to_12_string,t))
+        print(f"{day} : {t}")
 
     # process times into dataframe
     for day, time_list in punches.items():

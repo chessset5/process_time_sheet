@@ -7,7 +7,7 @@ import string
 
 import workTime
 
-DAYS_AGO = True
+DAYS_AGO = False
 
 def is_minutes_apart(time1: datetime.time, time2: datetime.time, minutes:int = 30) -> bool:
     """
