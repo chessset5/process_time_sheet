@@ -6,17 +6,18 @@
 # @ Description: Processes data from WorkTime
 """
 
-import decimal
-import functools
+import concurrent.futures
 import os
-from concurrent.futures import ThreadPoolExecutor
-from decimal import Decimal as D
+import copy
 
-import pandas
+import concurrent
+from concurrent.futures import ThreadPoolExecutor
 
 import workTime
-from helper_functions import process_csv_file, process_line
+from helper_functions import process_csv_file
 from table_process import proc_table
+from phase_code_process import process_work_times
+
 
 # pylint: disable=C0301
 # '''
@@ -63,85 +64,8 @@ from table_process import proc_table
 # '''
 
 
-def run_phase_sheet(headers: list[str], phase_sheet: pandas.DataFrame) -> None:
-    # sum line
-    total_line = pandas.Series(index=headers)
-    total_line["description"] = "TOTAL"
-
-    for idx, col_name in enumerate(total_line.index):
-        if idx < 3:
-            continue
-        values: list[decimal.Decimal] = phase_sheet[col_name].dropna().to_list()
-        total_line[col_name] = functools.reduce(lambda x, y: x + y, values)
-
-    # blank row
-    # phase_sheet.loc[len(phase_sheet)] = [None] * len(phase_sheet.columns)
-
-    # adding sum row
-    phase_sheet.loc["Total"] = total_line
-    phase_sheet.replace(to_replace=pandas.NA, value="", inplace=True)
-
-    md = phase_sheet.to_markdown()
-    print(md)
-    print()
-
-    md_file = r"./envHidden/export/phase_sheet.md"
-    md_file = os.path.normpath(md_file)
-    with open(file=md_file, mode="w", encoding="utf-8") as f:
-        f.write(md)
-
-
 def process_time_card() -> None:
-
-    # Define the header
-    headers: list[str] = [
-        "description",
-        "eqip. no.",
-        "phase code",
-        "SAT ST",
-        "sat ot",
-        "SUN ST",
-        "sun ot",
-        "MON ST",
-        "mon ot",
-        "TUE ST",
-        "tue ot",
-        "WED ST",
-        "wed ot",
-        "THU ST",
-        "thu ot",
-        "FRI ST",
-        "fri ot",
-        "TOT ST",
-        "tot ot",
-    ]
-
-    # Define the index
-    index: list[str | int] = list(range(23)) + [
-        "PTO",
-        "Holiday",
-        "Jury",
-        "Bereavement",
-        "Sick",
-        "Total",
-    ]  # [0,...,22,"PTO",...,"Total"]
-
-    # Create an empty DataFrame with the specified header and index
-    phase_sheet: pandas.DataFrame = pandas.DataFrame(columns=headers, index=index)
-
-    # Set the values for 'description', 'eqip. no.' and 'phase code' for rows 'PTO' to 'Bereavement'
-    phase_sheet.loc["PTO":"Bereavement", ["eqip. no.", "phase code"]] = [
-        "56.1077",
-        "10.010.0023",
-    ]
-    phase_sheet.loc["PTO", "description"] = "PTO"
-    phase_sheet.loc["Holiday", "description"] = "Holiday"
-    phase_sheet.loc["Jury", "description"] = "Jury Duty"
-    phase_sheet.loc["Bereavement", "description"] = "Bereavement"
-    phase_sheet.loc["Sick", "description"] = "*Sick Reserve (Salaried)"
-
     work_times: list[workTime.WorkTime] = list[workTime.WorkTime]()
-    line_no = 0
 
     folder_path = r"envHidden/data/to_process"
     csv_files: list[str] = []
@@ -154,16 +78,13 @@ def process_time_card() -> None:
         work: workTime.WorkTime = process_csv_file(csv_file)
         work_times.append(work)
 
-        line: dict[str, int | str | decimal.Decimal] = process_line(work)
-        phase_sheet.loc[line_no] = line.copy()  # pyright: ignore
-        line_no += 1
+    futures: list[concurrent.futures.Future] = []
+    with ThreadPoolExecutor() as executor:
+        futures.append(executor.submit(process_work_times, copy.deepcopy(work_times)))
+        futures.append(executor.submit(proc_table, copy.deepcopy(work_times)))
 
-    # with ThreadPoolExecutor() as e:
-    #     e.submit(run_phase_sheet(headers=headers, phase_sheet=phase_sheet))
-    #     e.submit(proc_table(work_list=work_times))
-    (run_phase_sheet(headers=headers, phase_sheet=phase_sheet))
-    (proc_table(work_list=work_times))
-    return
+    for future in futures:
+        print(future.result())
 
 
 def main() -> None:
