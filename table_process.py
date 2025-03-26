@@ -10,6 +10,39 @@ from helper_functions import get_week_day, is_minutes_apart, time_to_12_string, 
 
 
 def proc_table(work_list: list[workTime.WorkTime]) -> None:
+    
+    # TODO:
+    # [ ] refactor this
+    # [ ] line up all the punches for the day
+    # [ ]   if the start of one punch is 30m+ the end of another punch, assume it is lunch.
+    #           else ignore the previous punch
+    # [ ] implement sudo code:
+    #       punch_list
+    #       punch_index = 2
+    #       cur_punch = punch_list[0] # first punch
+    #       next_punch = punch_list[1] # second punch
+    #       punch_in = cur_punch.start
+    #       lunch_in
+    #       lunch_out
+    #       punch_out
+    #       lunch_ot_in
+    #       lunch_ot_out
+    #       punch_ot_out
+    #       for next_punch != punch_list[-1] # next punch is not last punch
+    #           if diff(cur_punch.last, next_punch.start) > 30:
+    #               # assume this is lunch
+    #               lunch_out = cur_punch.last
+    #               lunch_in = next_punch.start
+    #               break
+    #           else:
+    #               cur_punch = next_punch
+    #               next_punch = punch_list[punch_index]
+    #               punch_index += 1
+    #       # figure out the OT stuff
+    #       
+    #   [ ] if total work > 10hrs calculate OT lunches and OT time
+    #       [ ] make OT calculations
+    
     header: list[str] = [
         "Sat",
         "Sun",
