@@ -48,7 +48,7 @@ def proc_table_refactored(work_list:list[workTime.WorkTime])->None:
         for block in wt.work_blocks:
             if DAYS_AGO:
                 # if day is more than 7 days ago, skip it
-                if block.day < days_ago(days=7):
+                if block.day >= days_ago(days=7):
                     continue
             day: str = get_week_day(date_obj=block.day)
             short_day: str = day[:3] # get the first 3 letters

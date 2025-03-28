@@ -7,7 +7,7 @@ import string
 
 import workTime
 
-DAYS_AGO = False
+DAYS_AGO = True
 
 def is_minutes_apart(time1: datetime.time, time2: datetime.time, minutes:int = 30) -> bool:
     """
@@ -321,7 +321,7 @@ def process_line(work: workTime.WorkTime) -> dict[str, int | str | decimal.Decim
     to_ot = decimal.Decimal(value='0')  # total over time
     for block in work.work_blocks:
         if DAYS_AGO:
-            if block.day < days_ago(7):
+            if block.day >= days_ago(7):
                 continue
         week_day: str = get_week_day(date_obj=block.day)
         mx_hrs = decimal.Decimal("8")  # max standard hours
