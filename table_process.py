@@ -1,4 +1,3 @@
-
 import datetime
 import os
 from collections import defaultdict
@@ -8,41 +7,64 @@ import pandas
 import workTime
 from helper_functions import get_week_day, is_minutes_apart, time_to_12_string, days_ago, DAYS_AGO
 
-
-def proc_table(work_list: list[workTime.WorkTime]) -> None:
-    
+def proc_table_refactored(work_list:list[workTime.WorkTime])->None:
+        
     # TODO:
     # [ ] refactor this
     # [ ] line up all the punches for the day
     # [ ]   if the start of one punch is 30m+ the end of another punch, assume it is lunch.
     #           else ignore the previous punch
     # [ ] implement sudo code:
-    #       punch_list
-    #       punch_index = 2
-    #       cur_punch = punch_list[0] # first punch
-    #       next_punch = punch_list[1] # second punch
-    #       punch_in = cur_punch.start
-    #       lunch_in
-    #       lunch_out
-    #       punch_out
-    #       lunch_ot_in
-    #       lunch_ot_out
-    #       punch_ot_out
-    #       for next_punch != punch_list[-1] # next punch is not last punch
-    #           if diff(cur_punch.last, next_punch.start) > 30:
-    #               # assume this is lunch
-    #               lunch_out = cur_punch.last
-    #               lunch_in = next_punch.start
-    #               break
-    #           else:
-    #               cur_punch = next_punch
-    #               next_punch = punch_list[punch_index]
-    #               punch_index += 1
-    #       # figure out the OT stuff
+    # [ ]      punch_list
+    # [ ]      punch_index = 2
+    # [ ]      cur_punch = punch_list[0] # first punch
+    # [ ]      next_punch = punch_list[1] # second punch
+    # [ ]      punch_in = cur_punch.start
+    # [ ]      lunch_in
+    # [ ]      lunch_out
+    # [ ]      punch_out
+    # [ ]      lunch_ot_in
+    # [ ]      lunch_ot_out
+    # [ ]      punch_ot_out
+    # [ ]      while next_punch != punch_list[-1] # next punch is not last punch
+    # [ ]          if diff(cur_punch.last, next_punch.start) > 30:
+    # [ ]              # assume this is lunch
+    # [ ]              lunch_out = cur_punch.last
+    # [ ]              lunch_in = next_punch.start
+    # [ ]              break
+    # [ ]          else:
+    # [ ]              cur_punch = next_punch
+    # [ ]              next_punch = punch_list[punch_index]
+    # [ ]              punch_index += 1
+    #
+    # [ ]      # figure out the OT stuff
     #       
     #   [ ] if total work > 10hrs calculate OT lunches and OT time
     #       [ ] make OT calculations
     
+    # loading times
+    punch_week: defaultdict[str, list[workTime.ClockLine]] = defaultdict(list[workTime.ClockLine])
+    for wt in work_list:
+        for block in wt.work_blocks:
+            if DAYS_AGO:
+                # if day is more than 7 days ago, skip it
+                if block.day < days_ago(days=7):
+                    continue
+            day: str = get_week_day(date_obj=block.day)
+            short_day: str = day[:3] # get the first 3 letters
+            for clock in block.clock_times:
+                punch_week[short_day].append(clock)
+    
+    for day, punch_list in punch_week.items():
+        punch_index = 2
+        cur_punch: workTime.ClockLine = punch_list.pop(0)
+        
+        
+    
+    return
+
+def proc_table(work_list: list[workTime.WorkTime]) -> None:
+
     header: list[str] = [
         "Sat",
         "Sun",
@@ -81,20 +103,20 @@ def proc_table(work_list: list[workTime.WorkTime]) -> None:
     for wt in work_list:
         for block in wt.work_blocks:
             if DAYS_AGO:
-                if block.day > days_ago(7):
+                if block.day < days_ago(days=7):
                     continue
             day: str = get_week_day(date_obj=block.day)
             short_day: str = day[:3]
             for clock in block.clock_times:
                 punches[short_day].append(clock.start_time)
                 punches[short_day].append(clock.end_time)
-                
+
     for day in punches:
         t = punches[day]
         t = set(t)
         t = list(t)
         t.sort()
-        t = list(map(time_to_12_string,t))
+        t = list(map(time_to_12_string, t))
         print(f"{day} : {t}")
 
     # process times into dataframe
@@ -121,7 +143,7 @@ def proc_table(work_list: list[workTime.WorkTime]) -> None:
                 dyn_list.append(time_to_12_string(t))
 
         # updating the day's breaks
-        break_list: list[str] = ["yes"] * (len(dyn_list)//2)  # number of breaks is punches // 2
+        break_list: list[str] = ["yes"] * (len(dyn_list) // 2)  # number of breaks is punches // 2
         break_packed_list: list[str | None] = break_list + [None] * (len(breaks_idxs) - len(break_list))
         breaks_series = pandas.Series(break_packed_list, index=breaks_idxs)
         table_df[day].update(breaks_series)
