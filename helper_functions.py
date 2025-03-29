@@ -124,8 +124,8 @@ def timedelta_to_decimal_hours(time_delta: timedelta) -> Decimal:
         Decimal('5.500000')
     """
     # Get total seconds from timedelta and convert to decimal hours
-    total_seconds = Decimal(value=time_delta.total_seconds())
-    return total_seconds / Decimal(value=3600)  # 3600 seconds in an hour
+    total_seconds = Decimal(value=str(time_delta.total_seconds()))
+    return total_seconds / Decimal(value='3600.00')  # 3600 seconds in an hour
 
 
 def days_ago(days: int = 5) -> date:

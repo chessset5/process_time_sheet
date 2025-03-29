@@ -8,7 +8,7 @@ import workTime
 from helper_functions import process_line
 
 
-def process_work_times(work_list: list[workTime.WorkTime]) -> str:
+def process_work_times(work_list: list[workTime.WorkTime]) -> pandas.DataFrame:
     if not work_list:
         return
 
@@ -69,7 +69,7 @@ def process_work_times(work_list: list[workTime.WorkTime]) -> str:
     return run_phase_sheet(headers=headers, phase_sheet=phase_sheet)
 
 
-def run_phase_sheet(headers: list[str], phase_sheet: pandas.DataFrame) -> str:
+def run_phase_sheet(headers: list[str], phase_sheet: pandas.DataFrame) -> pandas.DataFrame:
     # sum line
     total_line = pandas.Series(index=headers)
     total_line["description"] = "TOTAL"
@@ -94,4 +94,4 @@ def run_phase_sheet(headers: list[str], phase_sheet: pandas.DataFrame) -> str:
     with open(file=md_file, mode="w", encoding="utf-8") as f:
         f.write(md)
 
-    return md
+    return phase_sheet

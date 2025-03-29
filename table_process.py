@@ -2,14 +2,24 @@ import datetime
 from datetime import datetime as dt, time, date, timedelta
 import os
 from collections import defaultdict
+from decimal import Decimal
 
 import pandas
 
 import workTime
-from helper_functions import get_week_day, is_minutes_apart, time_to_12_string, days_ago, DAYS_AGO, valid_date, time_diff
+from helper_functions import (
+    get_week_day,
+    is_minutes_apart,
+    time_to_12_string,
+    days_ago,
+    DAYS_AGO,
+    valid_date,
+    time_diff,
+    timedelta_to_decimal_hours
+)
 
 
-def proc_table_refactored(work_list: list[workTime.WorkTime]) -> None:
+def proc_table(work_list: list[workTime.WorkTime]) -> pandas.DataFrame:
     """
     Takes in a WorkTime object and creates its punch card.
 
@@ -47,6 +57,8 @@ def proc_table_refactored(work_list: list[workTime.WorkTime]) -> None:
         "Fri",
     ]
     index: list[str] = [
+        "num_hours:",
+        " ___ ",
         "Time In",
         "AM Rest Break ( yes)",
         "Lunch Out",
@@ -61,10 +73,14 @@ def proc_table_refactored(work_list: list[workTime.WorkTime]) -> None:
     ]
     time_sheet: dict[str, list[str]] = {}
     for day in header:
-        time_sheet.update({day: []})
+        time_sheet.update({day: [""] * len(index)})
 
     # process time sheet
     for day, punch_list in punch_week.items():
+        # sort the days
+        punch_list.sort(key=lambda x: x.start_time)
+
+        # process the days
         punch_index = 2
         cur_punch: workTime.ClockLine = punch_list[0]
         next_punch: workTime.ClockLine = punch_list[1]
@@ -110,6 +126,9 @@ def proc_table_refactored(work_list: list[workTime.WorkTime]) -> None:
         time_out = time_to_12_string(cur_punch.end_time)
 
         time_card: list[str | time] = []
+        spacer = "."*len(":---------")
+        time_card.append(f"{timedelta_to_decimal_hours(total_hours).quantize(Decimal('0.00'))} hrs")  # num hours
+        time_card.append(spacer)
         time_card.append(time_in)  # time in
         time_card.append("Yes")  # first break
         time_card.append(lunch_out)  # first lunch out
@@ -119,14 +138,14 @@ def proc_table_refactored(work_list: list[workTime.WorkTime]) -> None:
         # if punched more than 10 hours:
         if total_hours >= timedelta(hours=10):
             time_card.append("")  # <10hr punch out
-            time_card.append("...")  # spacer
+            time_card.append(spacer)  # spacer
             time_card.append(second_lunch_out)  # second lunch out
             time_card.append(second_lunch_in)  # second lunch in
             time_card.append("Yes")  # third break
             time_card.append(time_out)  # >10hr punch out
         else:
             time_card.append(time_out)  # <10hr punch out
-            time_card.append("...")  # spacer
+            time_card.append(spacer)  # spacer
             time_card.append("")  # second lunch out
             time_card.append("")  # second lunch in
             time_card.append("")  # third break
@@ -150,117 +169,4 @@ def proc_table_refactored(work_list: list[workTime.WorkTime]) -> None:
     with open(file=md_file, mode="w", encoding="utf-8") as f:
         f.write(md)
 
-    return
-
-
-def proc_table(work_list: list[workTime.WorkTime]) -> None:
-
-    header: list[str] = [
-        "Sat",
-        "Sun",
-        "Mon",
-        "Tue",
-        "Wed",
-        "Thu",
-        "Fri",
-    ]
-
-    index: list[str] = [
-        "Time In",
-        "AM Rest Break ( yes)",
-        "Lunch Out",
-        "Lunch In",
-        "PM Rest Break (yes)",
-        "Time Out",
-        " ... ",
-        "2nd Lunch Out",
-        "2nd Lunch In",
-        "2nd PM Rest Break (yes)",
-        "Time Out (10hr)",
-    ]
-
-    # only punch ins
-    punch_idxs: list[str] = [i for i in index if (not "Break" in i) and (not "..." in i)]  # time in
-    breaks_idxs: list[str] = [i for i in index if ("Break" in i)]  # rest breaks
-
-    table_df = pandas.DataFrame(columns=header, index=index)
-    # table_df.rename_axis(mapper="Day", axis="columns", inplace=True)
-
-    dyn_df = pandas.DataFrame(columns=header)
-
-    # loading times
-    punches: defaultdict[str, list[time]] = defaultdict(list[time])
-    for wt in work_list:
-        for block in wt.work_blocks:
-            if DAYS_AGO:
-                if valid_date(block.day):
-                    continue
-            day: str = get_week_day(date_obj=block.day)
-            short_day: str = day[:3]
-            for clock in block.clock_times:
-                punches[short_day].append(clock.start_time)
-                punches[short_day].append(clock.end_time)
-
-    for day in punches:
-        t = punches[day]
-        t = set(t)
-        t = list(t)
-        t.sort()
-        t = list(map(time_to_12_string, t))
-        print(f"{day} : {t}")
-
-    # process times into dataframe
-    for day, time_list in punches.items():
-        if not time_list:
-            continue
-        time_list.sort()
-
-        time_slot: dict[time, int] = {}
-        for t in time_list:
-            # get t, if no t, t = 0, t = t + 1
-            time_slot[t] = time_slot.get(t, 0) + 1
-
-        dyn_list: list[str] = list(map(time_to_12_string, time_slot))
-        if len(dyn_df) < len(dyn_list):
-            dyn_df.reindex(range(len(dyn_list)))
-        dyn_df[day] = dyn_list + [None] * (len(dyn_df) - len(dyn_list))
-
-        dyn_list: list[str] = []
-        for t, i in time_slot.items():
-            if i > 1:
-                pass
-            else:
-                dyn_list.append(time_to_12_string(t))
-
-        # updating the day's breaks
-        break_list: list[str] = ["yes"] * (len(dyn_list) // 2)  # number of breaks is punches // 2
-        break_packed_list: list[str | None] = break_list + [None] * (len(breaks_idxs) - len(break_list))
-        breaks_series = pandas.Series(break_packed_list, index=breaks_idxs)
-        table_df[day].update(breaks_series)
-
-        # updating the day's punch in time
-        dyn_packed_list: list[str | None] = dyn_list + [None] * (len(punch_idxs) - len(dyn_list))
-        dyn_series = pandas.Series(dyn_packed_list, index=punch_idxs)
-        table_df[day].update(dyn_series)
-
-    table_df.replace(pandas.NA, None, inplace=True)
-    table_df.loc[" ... "] = " ... "
-    dyn_df.replace(pandas.NA, None, inplace=True)
-
-    md: str = table_df.to_markdown()
-    print(md)
-    print()
-
-    md_file = r"./envHidden/export/time_table.md"
-    md_file: str = os.path.normpath(md_file)
-    with open(file=md_file, mode="w", encoding="utf-8") as f:
-        f.write(md)
-
-    md: str = dyn_df.to_markdown()
-    print(md)
-    print()
-
-    md_file = r"./envHidden/export/dyn_time_table.md"
-    md_file: str = os.path.normpath(md_file)
-    with open(file=md_file, mode="w", encoding="utf-8") as f:
-        f.write(md)
+    return table_df
