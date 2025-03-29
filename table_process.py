@@ -44,7 +44,16 @@ def proc_table(work_list: list[workTime.WorkTime]) -> None:
     dyn_df = pandas.DataFrame(columns=header)
 
     # loading times
-    punches: defaultdict[str, list[datetime.time]] = defaultdict(list[datetime.time])
+    punches: defaultdict[str, list[datetime.time]] = {
+        "Sat":list[datetime.time](),
+        "Sun":list[datetime.time](),
+        "Mon":list[datetime.time](),
+        "Tue":list[datetime.time](),
+        "Wed":list[datetime.time](),
+        "Thu":list[datetime.time](),
+        "Fri":list[datetime.time](),
+    }
+
     for wt in work_list:
         for block in wt.work_blocks:
             if DAYS_AGO:
@@ -55,14 +64,6 @@ def proc_table(work_list: list[workTime.WorkTime]) -> None:
             for clock in block.clock_times:
                 punches[short_day].append(clock.start_time)
                 punches[short_day].append(clock.end_time)
-                
-    for day in punches:
-        t = punches[day]
-        t = set(t)
-        t = list(t)
-        t.sort()
-        t = list(map(time_to_12_string,t))
-        print(f"{day} : {t}")
 
     # process times into dataframe
     for day, time_list in punches.items():
@@ -91,12 +92,12 @@ def proc_table(work_list: list[workTime.WorkTime]) -> None:
         break_list: list[str] = ["yes"] * (len(dyn_list)//2)  # number of breaks is punches // 2
         break_packed_list: list[str | None] = break_list + [None] * (len(breaks_idxs) - len(break_list))
         breaks_series = pandas.Series(break_packed_list, index=breaks_idxs)
-        table_df[day].update(breaks_series)
+        table_df.update({day:breaks_series})
 
         # updating the day's punch in time
         dyn_packed_list: list[str | None] = dyn_list + [None] * (len(punch_idxs) - len(dyn_list))
         dyn_series = pandas.Series(dyn_packed_list, index=punch_idxs)
-        table_df[day].update(dyn_series)
+        table_df.update({day:dyn_series})
 
     table_df.replace(pandas.NA, None, inplace=True)
     table_df.loc[" ... "] = " ... "
@@ -119,3 +120,7 @@ def proc_table(work_list: list[workTime.WorkTime]) -> None:
     md_file: str = os.path.normpath(md_file)
     with open(file=md_file, mode="w", encoding="utf-8") as f:
         f.write(md)
+
+if __name__ == "__main__":
+    import run
+    run.main()
