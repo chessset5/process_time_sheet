@@ -57,19 +57,19 @@ def proc_table(work_list: list[workTime.WorkTime]) -> pandas.DataFrame:
         "Fri",
     ]
     index: list[str] = [
-        "num_hours:",
-        " ___ ",
         "Time In",
         "AM Rest Break ( yes)",
         "Lunch Out",
         "Lunch In",
         "PM Rest Break (yes)",
         "Time Out",
-        " ... ",
+        ".......................",
         "2nd Lunch Out",
         "2nd Lunch In",
         "2nd PM Rest Break (yes)",
         "Time Out (10hr)",
+        "",
+        "hours punched:",
     ]
     time_sheet: dict[str, list[str]] = {}
     for day in header:
@@ -126,9 +126,7 @@ def proc_table(work_list: list[workTime.WorkTime]) -> pandas.DataFrame:
         time_out = time_to_12_string(cur_punch.end_time)
 
         time_card: list[str | time] = []
-        spacer = "."*len(":---------")
-        time_card.append(f"{timedelta_to_decimal_hours(total_hours).quantize(Decimal('0.00'))} hrs")  # num hours
-        time_card.append(spacer)
+        spacer = "."*len("----------")
         time_card.append(time_in)  # time in
         time_card.append("Yes")  # first break
         time_card.append(lunch_out)  # first lunch out
@@ -150,14 +148,14 @@ def proc_table(work_list: list[workTime.WorkTime]) -> pandas.DataFrame:
             time_card.append("")  # second lunch in
             time_card.append("")  # third break
             time_card.append("")  # >10hr punch out
+        time_card.append("")
+        time_card.append(f"{timedelta_to_decimal_hours(total_hours).quantize(Decimal('0.00'))} hrs")  # num hours
 
         time_sheet.update({day: time_card})
 
     table_df: pandas.DataFrame = pandas.DataFrame(data=time_sheet, columns=header, index=index)
 
     md: str = table_df.to_markdown()
-    print(md)
-    print()
 
     md_file = r"./envHidden/export/time_table.md"
     md_file: str = os.path.normpath(md_file)

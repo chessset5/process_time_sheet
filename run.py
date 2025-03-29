@@ -13,6 +13,8 @@ import copy
 import concurrent
 from concurrent.futures import ThreadPoolExecutor
 
+import pandas
+
 import workTime
 import helper_functions
 from helper_functions import process_csv_file
@@ -86,11 +88,13 @@ def process_time_card() -> None:
 
     futures: list[concurrent.futures.Future] = []
     with ThreadPoolExecutor(max_workers=MW) as executor:
-        futures.append(executor.submit(process_work_times, copy.deepcopy(work_times)))
         futures.append(executor.submit(proc_table, copy.deepcopy(work_times)))
+        futures.append(executor.submit(process_work_times, copy.deepcopy(work_times)))
 
     for future in futures:
-        print(future.result())
+        a:pandas.DataFrame = future.result()
+        print(a.to_markdown())
+        print()
 
 
 def main() -> None:
