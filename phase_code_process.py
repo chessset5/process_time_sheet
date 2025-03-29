@@ -8,7 +8,10 @@ import workTime
 from helper_functions import process_line
 
 
-def process_work_times(work_list:list[workTime.WorkTime]) -> str:
+def process_work_times(work_list: list[workTime.WorkTime]) -> str:
+    if not work_list:
+        return
+
     # Define the header
     headers: list[str] = [
         "description",
@@ -55,17 +58,16 @@ def process_work_times(work_list:list[workTime.WorkTime]) -> str:
     phase_sheet.loc["Jury", "description"] = "Jury Duty"
     phase_sheet.loc["Bereavement", "description"] = "Bereavement"
     phase_sheet.loc["Sick", "description"] = "*Sick Reserve (Salaried)"
-    
-    
+
     line_no = 0
     for work in work_list:
         line: dict[str, int | str | decimal.Decimal] = process_line(work=work)
         if line["TOT ST"] or line["tot ot"]:
             phase_sheet.loc[line_no] = line.copy()  # pyright: ignore
             line_no += 1
-        
-    return run_phase_sheet(headers=headers,phase_sheet=phase_sheet)
-    
+
+    return run_phase_sheet(headers=headers, phase_sheet=phase_sheet)
+
 
 def run_phase_sheet(headers: list[str], phase_sheet: pandas.DataFrame) -> str:
     # sum line
@@ -85,11 +87,11 @@ def run_phase_sheet(headers: list[str], phase_sheet: pandas.DataFrame) -> str:
     phase_sheet.loc["Total"] = total_line
     phase_sheet.replace(to_replace=pandas.NA, value="", inplace=True)
 
-    md:str = phase_sheet.to_markdown()
+    md: str = phase_sheet.to_markdown()
 
     md_file = r"./envHidden/export/phase_sheet.md"
     md_file = os.path.normpath(md_file)
     with open(file=md_file, mode="w", encoding="utf-8") as f:
         f.write(md)
-        
+
     return md
