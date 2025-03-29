@@ -84,12 +84,12 @@ def proc_table(work_list: list[workTime.WorkTime]) -> pandas.DataFrame:
         punch_index = 2
         cur_punch: workTime.ClockLine = punch_list[0]
         next_punch: workTime.ClockLine = punch_list[1]
-        time_in: str = time_to_12_string(cur_punch.start_time)
-        lunch_out: str = ""
-        lunch_in: str = ""
-        time_out: str = ""
-        second_lunch_out: str = ""
-        second_lunch_in: str = ""
+        time_in: time | str = cur_punch.start_time
+        lunch_out: time| str = ""
+        lunch_in: time| str = ""
+        time_out: time| str = ""
+        second_lunch_out: time| str = ""
+        second_lunch_in: time| str = ""
         # second time out is just the first time out
 
         seen_blocks: set[workTime.ClockLine] = set()
@@ -100,11 +100,11 @@ def proc_table(work_list: list[workTime.WorkTime]) -> pandas.DataFrame:
             if time_diff(cur_punch.end_time, next_punch.start_time) > timedelta(minutes=30):
                 # lunch time
                 if not lunch_out:
-                    lunch_out = time_to_12_string(cur_punch.end_time)
-                    lunch_in = time_to_12_string(next_punch.start_time)
+                    lunch_out = (cur_punch.end_time)
+                    lunch_in = (next_punch.start_time)
                 elif lunch_out and (not second_lunch_out):
-                    second_lunch_out = time_to_12_string(cur_punch.end_time)
-                    second_lunch_in = time_to_12_string(next_punch.start_time)
+                    second_lunch_out = (cur_punch.end_time)
+                    second_lunch_in = (next_punch.start_time)
 
             # redundancy due to my stupidity.
             if not cur_punch in seen_blocks:
@@ -118,27 +118,42 @@ def proc_table(work_list: list[workTime.WorkTime]) -> pandas.DataFrame:
                 punch_index += 1
             else:
                 break
-
         # redundancy due to my stupidity.
         if not cur_punch in seen_blocks:
             total_hours += cur_punch.total_time
             seen_blocks.add(cur_punch)
-        time_out = time_to_12_string(cur_punch.end_time)
+        time_out = (cur_punch.end_time)
+
+        # processing work hours more accurately
+        hours_worked = timedelta(0)
+        # calculating total hours
+        if time_in and lunch_out:
+            hours_worked += time_diff(time_in, lunch_out)
+        if total_hours >= timedelta(hours=10):
+            if lunch_in and second_lunch_out:
+                hours_worked += time_diff(lunch_in,second_lunch_out)
+            if second_lunch_in and time_out:
+                hours_worked += time_diff(second_lunch_in,time_out)
+        else:
+            if lunch_in and time_out:
+                hours_worked += time_diff(lunch_in,time_out)
+
+
 
         time_card: list[str | time] = []
         spacer = "."*len("----------")
-        time_card.append(time_in)  # time in
+        time_card.append(time_to_12_string(time_in))  # time in
         time_card.append("Yes")  # first break
-        time_card.append(lunch_out)  # first lunch out
-        time_card.append(lunch_in)  # first lunch in
+        time_card.append(time_to_12_string(lunch_out))  # first lunch out
+        time_card.append(time_to_12_string(lunch_in))  # first lunch in
         time_card.append("Yes")  # second break
 
         # if punched more than 10 hours:
         if total_hours >= timedelta(hours=10):
             time_card.append("")  # <10hr punch out
             time_card.append(spacer)  # spacer
-            time_card.append(second_lunch_out)  # second lunch out
-            time_card.append(second_lunch_in)  # second lunch in
+            time_card.append(time_to_12_string(second_lunch_out))  # second lunch out
+            time_card.append(time_to_12_string(second_lunch_in))  # second lunch in
             time_card.append("Yes")  # third break
             time_card.append(time_out)  # >10hr punch out
         else:
@@ -149,7 +164,7 @@ def proc_table(work_list: list[workTime.WorkTime]) -> pandas.DataFrame:
             time_card.append("")  # third break
             time_card.append("")  # >10hr punch out
         time_card.append("")
-        time_card.append(f"{timedelta_to_decimal_hours(total_hours).quantize(Decimal('0.00'))} hrs")  # num hours
+        time_card.append(f"{timedelta_to_decimal_hours(hours_worked).quantize(Decimal('0.00'))} hrs")  # num hours
 
         time_sheet.update({day: time_card})
 
