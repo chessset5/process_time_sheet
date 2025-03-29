@@ -65,12 +65,12 @@ from phase_code_process import process_work_times
 # '''
 
 
-
 MW = 1
+
 
 def process_time_card() -> None:
     helper_functions.DAYS_AGO = True
-    
+
     work_times: list[workTime.WorkTime] = list[workTime.WorkTime]()
 
     folder_path = r"envHidden/data/to_process"
