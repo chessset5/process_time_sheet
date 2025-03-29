@@ -39,6 +39,13 @@ class FinalLine:
     def __repr__(self) -> str:
         return str(self)
 
+    def __hash__(self) -> int:
+        hash_str = \
+            str(self.line)\
+            + " " + str(self.total_time)\
+            + " " + str(self.total_money)
+        return hash(hash_str)
+
 
 class ClockLine:
     def __init__(self) -> None:
@@ -48,9 +55,18 @@ class ClockLine:
         self.money: decimal.Decimal = decimal.Decimal(0)
         self.comment: str = str()
 
-    def __str__(self)->str:
-        class_str:str = str(self.start_time) + " " + str(self.end_time) + " " + str(self.total_time)
+    def __str__(self) -> str:
+        class_str: str = str(self.start_time) + " " + str(self.end_time) + " " + str(self.total_time)
         return class_str
+
+    def __hash__(self) -> int:
+        hash_str = \
+            str(self.start_time)\
+            + " " + str(self.end_time)\
+            + " " + str(self.total_time)\
+            + " " + str(self.money)\
+            + " " + str(self.comment)
+        return hash(hash_str)
 
     def __repr__(self) -> str:
         return str(self)
@@ -63,7 +79,7 @@ class WorkBlock:
         self.final_line: FinalLine = FinalLine()
 
     def __str__(self) -> str:
-        block:str = str(self.day) + "\n"
+        block: str = str(self.day) + "\n"
         for i in self.clock_times:
             block += str(i) + "\n"
         block += str(self.final_line)
@@ -72,6 +88,13 @@ class WorkBlock:
     def __repr__(self) -> str:
         return str(self)
 
+    def __hash__(self) -> int:
+        hash_str = \
+            str(self.day)\
+            + " " + str(self.clock_times)\
+            + " " + str(self.final_line)
+        return hash(hash_str)
+
 
 class WorkTime:
     def __init__(self) -> None:
@@ -79,10 +102,16 @@ class WorkTime:
         self.work_blocks: list[WorkBlock] = list[WorkBlock]()
 
     def __str__(self) -> str:
-        work :str = str(self.name) + "\n"
+        work: str = str(self.name) + "\n"
         for i in self.work_blocks:
             work += str(i) + "\n"
         return work
 
     def __repr__(self) -> str:
         return str(self)
+
+    def __hash__(self) -> int:
+        hash_str = \
+            str(self.name)\
+            + " " + str(self.work_blocks)
+        return hash(hash_str)
