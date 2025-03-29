@@ -5,7 +5,7 @@ from collections import defaultdict
 import pandas
 
 import workTime
-from helper_functions import get_week_day, is_minutes_apart, time_to_12_string, days_ago, DAYS_AGO
+from helper_functions import get_week_day, is_minutes_apart, time_to_12_string, days_ago, DAYS_AGO, valid_date
 
 def proc_table_refactored(work_list:list[workTime.WorkTime])->None:
         
@@ -15,8 +15,8 @@ def proc_table_refactored(work_list:list[workTime.WorkTime])->None:
     # [ ]   if the start of one punch is 30m+ the end of another punch, assume it is lunch.
     #           else ignore the previous punch
     # [ ] implement sudo code:
-    # [ ]      punch_list
-    # [ ]      punch_index = 2
+    # [x]      punch_list
+    # [x]      punch_index = 2
     # [ ]      cur_punch = punch_list[0] # first punch
     # [ ]      next_punch = punch_list[1] # second punch
     # [ ]      punch_in = cur_punch.start
@@ -48,7 +48,7 @@ def proc_table_refactored(work_list:list[workTime.WorkTime])->None:
         for block in wt.work_blocks:
             if DAYS_AGO:
                 # if day is more than 7 days ago, skip it
-                if block.day >= days_ago(days=7):
+                if valid_date(block.day):
                     continue
             day: str = get_week_day(date_obj=block.day)
             short_day: str = day[:3] # get the first 3 letters
@@ -57,7 +57,14 @@ def proc_table_refactored(work_list:list[workTime.WorkTime])->None:
     
     for day, punch_list in punch_week.items():
         punch_index = 2
-        cur_punch: workTime.ClockLine = punch_list.pop(0)
+        cur_punch: workTime.ClockLine = punch_list[0]
+        next_punch:workTime.ClockLine = punch_list[1]
+        punch_in: datetime.time = cur_punch.start_time
+        lunch_out: datetime.time
+        punch_out: datetime.time
+        lunch_ot_in: datetime.time
+        lunch_ot_out: datetime.time
+        punch_ot_out: datetime.time
         
         
     
@@ -103,7 +110,7 @@ def proc_table(work_list: list[workTime.WorkTime]) -> None:
     for wt in work_list:
         for block in wt.work_blocks:
             if DAYS_AGO:
-                if block.day < days_ago(days=7):
+                if valid_date(block.day):
                     continue
             day: str = get_week_day(date_obj=block.day)
             short_day: str = day[:3]

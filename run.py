@@ -14,6 +14,7 @@ import concurrent
 from concurrent.futures import ThreadPoolExecutor
 
 import workTime
+import helper_functions
 from helper_functions import process_csv_file
 from table_process import proc_table
 from phase_code_process import process_work_times
@@ -64,7 +65,12 @@ from phase_code_process import process_work_times
 # '''
 
 
+
+MW = 1
+
 def process_time_card() -> None:
+    helper_functions.DAYS_AGO = True
+    
     work_times: list[workTime.WorkTime] = list[workTime.WorkTime]()
 
     folder_path = r"envHidden/data/to_process"
@@ -79,7 +85,7 @@ def process_time_card() -> None:
         work_times.append(work)
 
     futures: list[concurrent.futures.Future] = []
-    with ThreadPoolExecutor() as executor:
+    with ThreadPoolExecutor(max_workers=MW) as executor:
         futures.append(executor.submit(process_work_times, copy.deepcopy(work_times)))
         futures.append(executor.submit(proc_table, copy.deepcopy(work_times)))
 

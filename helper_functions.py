@@ -301,6 +301,8 @@ def clean_name(name: str) -> str:
 
     return " ".join(first_three)
 
+def valid_date(day:datetime.date) -> bool:
+    return day <= days_ago(days=7)
 
 def process_line(work: workTime.WorkTime) -> dict[str, int | str | decimal.Decimal]:
     dec_default = "0"
@@ -321,7 +323,7 @@ def process_line(work: workTime.WorkTime) -> dict[str, int | str | decimal.Decim
     to_ot = decimal.Decimal(value='0')  # total over time
     for block in work.work_blocks:
         if DAYS_AGO:
-            if block.day >= days_ago(7):
+            if valid_date(block.day):
                 continue
         week_day: str = get_week_day(date_obj=block.day)
         mx_hrs = decimal.Decimal("8")  # max standard hours
