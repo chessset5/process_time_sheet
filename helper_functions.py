@@ -1,15 +1,15 @@
 
-import csv
-import datetime
-from datetime import datetime as dt, time, date, timedelta
-import decimal
-from decimal import Decimal
+
+import json
 import re
 import string
+from datetime import date
+from datetime import datetime as dt
+from datetime import time, timedelta
+from decimal import Decimal
 
-import workTime
 
-DAYS_AGO = True
+VALIDATE_DATE = True
 
 
 def is_minutes_apart(time1: time, time2: time, minutes: int = 30) -> bool:
@@ -158,7 +158,7 @@ def time_diff(lhs: time, rhs: time) -> timedelta:
     lhs_dt: timedelta = dt.combine(date=date.min, time=lhs) - dt.min
     rhs_dt: timedelta = dt.combine(date=date.min, time=rhs) - dt.min
     # diff, keep it positive.
-    diff : timedelta = timedelta(0)
+    diff: timedelta = timedelta(0)
     if lhs_dt > rhs_dt:
         diff = lhs_dt - rhs_dt
     else:
@@ -226,6 +226,34 @@ def get_phase_code(input_string) -> str:
         return ""  # Return None if no match is found
 
 
+def name_from_phase_code(phase_code: str) -> str:
+    """
+    Returns phase code name if it exists.
+    If no code exists, "" is returned
+
+    Args:
+        phase_code (str): phase code to look for
+
+    Returns:
+        str: phase code name
+    """
+    # ...
+    # Process Phase code xlsx into a dictionary for speed
+    # make them strings instead of multiple cells
+    phase_code = phase_code.strip()
+    codes: dict[str, str] = {}
+    try:
+        from envHidden.data.file_locations import PHASECODE_PATH
+        with open(file=PHASECODE_PATH, mode="r", encoding="utf-8") as f:
+            codes = json.load(fp=f)
+        if phase_code in codes:
+            return codes[phase_code]
+    except:
+        print("No Phase Codes present")
+    finally:
+        return ""
+
+
 def remove_phase_code(input_string) -> str:
     """
     Removes the first matched string from the input string that follows the format
@@ -254,63 +282,10 @@ def remove_phase_code(input_string) -> str:
     return result
 
 
-def process_csv_file(csv_file: str) -> workTime.WorkTime:
-
-    work_time: workTime.WorkTime = workTime.WorkTime()
-    not_in_block: bool = True
-    with open(file=csv_file, mode='r', encoding='utf-8') as file:
-        csv_reader = csv.reader(file)
-        work_block: workTime.WorkBlock = workTime.WorkBlock()
-        for index, row in enumerate(csv_reader):
-            # first row
-            if index == 0:
-                work_time.name = row[0]
-                continue
-
-            # indication of the start of a block
-            # ["","","Feb 5, 2025"]
-            if row and not_in_block and is_valid_date(date_str=row[-1]):
-                not_in_block = False
-                work_block = workTime.WorkBlock()
-                parsed_date: dt = parse_date(date_str=row[-1])
-                work_block.day = parsed_date.date()
-                continue
-
-            # in a block
-            if not not_in_block:
-                # misc row in a block
-                if row[0] == r"Start":
-                    continue
-                # indication of the end of a block
-                if row[0].startswith(r"Total:"):
-                    work_block.final_line.line = row[0]  # "Total:     08:00:00               $498.00"
-                    split: list[str] = work_block.final_line.line.split()  # ["Total:","08:00:00","$498.00"]
-
-                    time_: list[str] = split[1].split(":")  # ["08","00","00"]
-                    hour: int = int(time_[0])
-                    minute: int = int(time_[1])
-                    second: int = int(time_[2])
-                    work_block.final_line.total_time = timedelta(hours=hour, minutes=minute, seconds=second)  # 08:00:00
-
-                    work_block.final_line.total_money = Decimal(value=split[2][1:])  # 498.00
-
-                    work_time.work_blocks.append(work_block)
-                    not_in_block = True
-                    continue
-
-                # row of a block
-                # ["8:00:00 AM","12:00:00 PM","04:00:00","$249.00","comment"]
-                line: workTime.ClockLine = workTime.ClockLine()
-                line.start_time = parse_am_pm_time(time_str=row[0])  # "8:00:00 AM"
-                line.end_time = parse_am_pm_time(time_str=row[1])  # "12:00:00 PM"
-                line.total_time = time_string_to_timedelta(time_str=row[2])  # "04:00:00"
-                line.money = Decimal(value=row[3][1:])  # 249.00
-                line.comment = row[4]
-                work_block.clock_times.append(line)
-    return work_time
-
-
-def clean_name(name: str) -> str:
+def sanitized_first_three_words(name: str) -> str:
+    '''
+    sanitizes the name and removes invalid characters and returns the first 3 words
+    '''
     name = name.encode(encoding='ascii', errors='ignore').decode(encoding='ascii')
     words: list[str] = name.split()
     first_three: list[str] = list[str]()
@@ -327,11 +302,37 @@ def clean_name(name: str) -> str:
 
     return " ".join(first_three)
 
+def this_friday() -> date:
+    '''
+    returns this friday. This is inclusive, if today is friday, it will return today.
+    '''
+    today: date = date.today()
+    day_offset_lookup: dict[str, int] = {"Friday": 0, "Saturday": 6, "Sunday": 5, "Monday": 5, "Tuesday": 3, "Wednesday": 2, "Thursday": 1}
+    offset: int = day_offset_lookup[get_week_day(date_obj=today)]
+    return today + timedelta(days=offset)
+
+def next_friday() -> date:
+    '''
+    returns the next friday
+    '''
+    today: date = date.today()
+    day_offset_lookup: dict[str, int] = {"Friday": 7, "Saturday": 6, "Sunday": 5, "Monday": 5, "Tuesday": 3, "Wednesday": 2, "Thursday": 1}
+    offset: int = day_offset_lookup[get_week_day(date_obj=today)]
+    return today + timedelta(days=offset)
+
+
+def last_friday() -> date:
+    '''
+    returns the date of last friday
+    '''
+    today: date = date.today()
+    day_offset_lookup: dict[str, int] = {"Saturday": -1, "Sunday": -2, "Monday": -3, "Tuesday": -4, "Wednesday": -5, "Thursday": -6, "Friday": -7}
+    offset: int = day_offset_lookup[get_week_day(date_obj=today)]
+    return today + timedelta(days=offset)
+
 
 def invalid_date(day: date) -> bool:
     '''
     Returns True if the date is invalid, else returns false
     '''
-    return day <= days_ago(days=7) if DAYS_AGO else False
-
-
+    return day <= last_friday() if VALIDATE_DATE else False

@@ -6,21 +6,22 @@
 # @ Description: Processes data from WorkTime
 """
 
-import concurrent.futures
-import os
-import copy
 
-import concurrent
-from concurrent.futures import ThreadPoolExecutor
+import copy
+import csv
+import os
+from concurrent.futures import Future, ThreadPoolExecutor
+from datetime import datetime as dt
+from datetime import timedelta
+from decimal import Decimal
 
 import pandas
 
 import workTime
-import helper_functions
-from helper_functions import process_csv_file
-from table_process import proc_table
+from helper_functions import (is_valid_date, parse_am_pm_time, parse_date,
+                              time_string_to_timedelta)
 from phase_code_process import process_work_times
-
+from table_process import proc_table
 
 # pylint: disable=C0301
 # '''
@@ -67,8 +68,68 @@ from phase_code_process import process_work_times
 # '''
 
 
+def process_csv_file(csv_file: str) -> workTime.WorkTime:
+    '''
+    process the csv file
+    '''
+    work_time: workTime.WorkTime = workTime.WorkTime()
+    not_in_block: bool = True
+    with open(file=csv_file, mode='r', encoding='utf-8') as file:
+        csv_reader = csv.reader(file)
+        work_block: workTime.WorkBlock = workTime.WorkBlock()
+        for index, row in enumerate(csv_reader):
+            # first row
+            if index == 0:
+                work_time.name = row[0]
+                continue
+
+            # indication of the start of a block
+            # ["","","Feb 5, 2025"]
+            if row and not_in_block and is_valid_date(date_str=row[-1]):
+                not_in_block = False
+                work_block = workTime.WorkBlock()
+                parsed_date: dt = parse_date(date_str=row[-1])
+                work_block.day = parsed_date.date()
+                continue
+
+            # in a block
+            if not not_in_block:
+                # misc row in a block
+                if row[0] == r"Start":
+                    continue
+                # indication of the end of a block
+                if row[0].startswith(r"Total:"):
+                    work_block.final_line.line = row[0]  # "Total:     08:00:00               $498.00"
+                    split: list[str] = work_block.final_line.line.split()  # ["Total:","08:00:00","$498.00"]
+
+                    time_: list[str] = split[1].split(":")  # ["08","00","00"]
+                    hour: int = int(time_[0])
+                    minute: int = int(time_[1])
+                    second: int = int(time_[2])
+                    work_block.final_line.total_time = timedelta(hours=hour, minutes=minute, seconds=second)  # 08:00:00
+
+                    work_block.final_line.total_money = Decimal(value=split[2][1:])  # 498.00
+
+                    work_time.work_blocks.append(work_block)
+                    not_in_block = True
+                    continue
+
+                # row of a block
+                # ["8:00:00 AM","12:00:00 PM","04:00:00","$249.00","comment"]
+                line: workTime.ClockLine = workTime.ClockLine()
+                line.start_time = parse_am_pm_time(time_str=row[0])  # "8:00:00 AM"
+                line.end_time = parse_am_pm_time(time_str=row[1])  # "12:00:00 PM"
+                line.total_time = time_string_to_timedelta(time_str=row[2])  # "04:00:00"
+                line.money = Decimal(value=row[3][1:])  # 249.00
+                line.comment = row[4]
+                work_block.clock_times.append(line)
+    return work_time
+
+
 def process_time_card() -> None:
-    helper_functions.DAYS_AGO = True
+    '''
+    make time card
+    '''
 
     work_times: list[workTime.WorkTime] = list[workTime.WorkTime]()
 
@@ -83,7 +144,7 @@ def process_time_card() -> None:
         work: workTime.WorkTime = process_csv_file(csv_file)
         work_times.append(work)
 
-    futures: list[concurrent.futures.Future] = []
+    futures: list[Future] = []
     with ThreadPoolExecutor() as executor:
         futures.append(executor.submit(proc_table, copy.deepcopy(work_times)))
         futures.append(executor.submit(process_work_times, copy.deepcopy(work_times)))
@@ -95,6 +156,9 @@ def process_time_card() -> None:
 
 
 def main() -> None:
+    '''
+    main
+    '''
     process_time_card()
     return
 
