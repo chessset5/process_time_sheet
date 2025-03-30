@@ -44,3 +44,11 @@ The output formate will be like so:
 
 ...
 ```
+
+# installs
+
+```bash
+pip install pypdf
+pip install pandas
+pip install pynput
+```

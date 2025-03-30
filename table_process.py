@@ -1,22 +1,26 @@
-import datetime
-from datetime import datetime as dt, time, date, timedelta
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+'''
+ # @ Author: Aaron Shackelford
+ # @ Create Time: 2025-03-29 13:34:40
+ # @ Modified by: Aaron Shackelford
+ # @ Modified time: 2025-03-30 12:35:31
+ # @ Description:
+ processes the time sheet time table
+ '''
+
+
 import os
 from collections import defaultdict
+from datetime import time, timedelta
 from decimal import Decimal
 
 import pandas
 
 import workTime
-from helper_functions import (
-    get_week_day,
-    is_minutes_apart,
-    time_to_12_string,
-    days_ago,
-    DAYS_AGO,
-    invalid_date,
-    time_diff,
-    timedelta_to_decimal_hours
-)
+from helper_functions import (get_week_day, invalid_date,
+                              time_diff, time_to_12_string,
+                              timedelta_to_decimal_hours)
 
 
 def proc_table(work_list: list[workTime.WorkTime]) -> pandas.DataFrame:
@@ -84,11 +88,11 @@ def proc_table(work_list: list[workTime.WorkTime]) -> pandas.DataFrame:
         cur_punch: workTime.ClockLine = punch_list[0]
         next_punch: workTime.ClockLine = punch_list[1]
         time_in: time | str = cur_punch.start_time
-        lunch_out: time| str = ""
-        lunch_in: time| str = ""
-        time_out: time| str = ""
-        second_lunch_out: time| str = ""
-        second_lunch_in: time| str = ""
+        lunch_out: time | str = ""
+        lunch_in: time | str = ""
+        time_out: time | str = ""
+        second_lunch_out: time | str = ""
+        second_lunch_in: time | str = ""
         # second time out is just the first time out
 
         seen_blocks: set[workTime.ClockLine] = set()
@@ -130,17 +134,15 @@ def proc_table(work_list: list[workTime.WorkTime]) -> pandas.DataFrame:
             hours_worked += time_diff(time_in, lunch_out)
         if total_hours >= timedelta(hours=10):
             if lunch_in and second_lunch_out:
-                hours_worked += time_diff(lunch_in,second_lunch_out)
+                hours_worked += time_diff(lunch_in, second_lunch_out)
             if second_lunch_in and time_out:
-                hours_worked += time_diff(second_lunch_in,time_out)
+                hours_worked += time_diff(second_lunch_in, time_out)
         else:
             if lunch_in and time_out:
-                hours_worked += time_diff(lunch_in,time_out)
-
-
+                hours_worked += time_diff(lunch_in, time_out)
 
         time_card: list[str | time] = []
-        spacer = "."*len("----------")
+        spacer = "." * len("----------")
         time_card.append(time_to_12_string(time_in))  # time in
         time_card.append("Yes")  # first break
         time_card.append(time_to_12_string(lunch_out))  # first lunch out

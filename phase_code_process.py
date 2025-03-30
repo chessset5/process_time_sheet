@@ -1,3 +1,16 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+'''
+ # @ Author: Aaron Shackelford
+ # @ Create Time: 2025-03-29 13:34:40
+ # @ Modified by: Aaron Shackelford
+ # @ Modified time: 2025-03-30 12:36:56
+ # @ Description:
+
+ Processes the phase code sheet
+ '''
+
+
 import decimal
 import functools
 import os
@@ -6,21 +19,29 @@ from decimal import Decimal
 import pandas
 
 import workTime
-from helper_functions import (
-    clean_name,
-    remove_phase_code,
-    get_phase_code,
-    DAYS_AGO,
-    invalid_date,
-    get_week_day,
-    timedelta_to_decimal_hours
-)
+from helper_functions import (get_phase_code, get_week_day,
+                              invalid_date, name_from_phase_code,
+                              remove_phase_code, sanitized_first_three_words,
+                              timedelta_to_decimal_hours)
 
+
+# TODO:
+# [ ] Refactor this into more defined functions
 
 def process_line(work: workTime.WorkTime) -> dict[str, int | str | Decimal]:
+    """
+    Processes work into a phase code line
+
+    Args:
+        work (workTime.WorkTime): work to process
+
+    Returns:
+        dict[str, int | str | Decimal]: line of work for the phase code sheet
+    """
+    name: str = name_from_phase_code(phase_code=get_phase_code(input_string=work.name))
     dec_default = "0"
     line: dict[str, int | str | Decimal] = {
-        "description": clean_name(name=remove_phase_code(input_string=work.name)),
+        "description": sanitized_first_three_words(name=remove_phase_code(input_string=work.name)),
         "eqip. no.": "56.1077",
         "phase code": get_phase_code(work.name),
         "SAT ST": Decimal(value=dec_default), "sat ot": Decimal(value=dec_default),
@@ -74,6 +95,15 @@ def process_line(work: workTime.WorkTime) -> dict[str, int | str | Decimal]:
 
 
 def process_work_times(work_list: list[workTime.WorkTime]) -> pandas.DataFrame:
+    """
+    Processes work into phase code sheet
+
+    Args:
+        work_list (list[workTime.WorkTime]): work to process
+
+    Returns:
+        pandas.DataFrame: pandas dataframe of work in the shape of the phase code sheet
+    """
     if not work_list:
         return
 
@@ -135,7 +165,19 @@ def process_work_times(work_list: list[workTime.WorkTime]) -> pandas.DataFrame:
 
 
 def run_phase_sheet(headers: list[str], phase_sheet: pandas.DataFrame) -> pandas.DataFrame:
+    """
+    calculates totals line and generates markdown line
+
+    Args:
+        headers (list[str]): headers to use in dataframe
+        phase_sheet (pandas.DataFrame): dataframe to fill data
+
+    Returns:
+        pandas.DataFrame: filled out dataframe
+    """
     # sum line
+    # TODO:
+    # [ ] refactor this line to just use index=phase_sheet.headers or something
     total_line = pandas.Series(index=headers)
     total_line["description"] = "TOTAL"
 
