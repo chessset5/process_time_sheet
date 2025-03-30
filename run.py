@@ -67,9 +67,6 @@ from phase_code_process import process_work_times
 # '''
 
 
-MW = 1
-
-
 def process_time_card() -> None:
     helper_functions.DAYS_AGO = True
 
@@ -87,12 +84,12 @@ def process_time_card() -> None:
         work_times.append(work)
 
     futures: list[concurrent.futures.Future] = []
-    with ThreadPoolExecutor(max_workers=MW) as executor:
+    with ThreadPoolExecutor() as executor:
         futures.append(executor.submit(proc_table, copy.deepcopy(work_times)))
         futures.append(executor.submit(process_work_times, copy.deepcopy(work_times)))
 
     for future in futures:
-        a:pandas.DataFrame = future.result()
+        a: pandas.DataFrame = future.result()
         print(a.to_markdown())
         print()
 
