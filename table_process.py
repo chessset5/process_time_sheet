@@ -13,7 +13,7 @@ from helper_functions import (
     time_to_12_string,
     days_ago,
     DAYS_AGO,
-    valid_date,
+    invalid_date,
     time_diff,
     timedelta_to_decimal_hours
 )
@@ -37,10 +37,9 @@ def proc_table(work_list: list[workTime.WorkTime]) -> pandas.DataFrame:
     punch_week: defaultdict[str, list[workTime.ClockLine]] = defaultdict(list[workTime.ClockLine])
     for wt in work_list:
         for block in wt.work_blocks:
-            if DAYS_AGO:
-                # if day is more than 7 days ago, skip it
-                if valid_date(block.day):
-                    continue
+            # if date is invalid, skip it
+            if invalid_date(block.day):
+                continue
             day: str = get_week_day(date_obj=block.day)
             short_day: str = day[:3]  # get the first 3 letters
             for clock in block.clock_times:

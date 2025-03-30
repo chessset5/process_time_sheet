@@ -328,62 +328,10 @@ def clean_name(name: str) -> str:
     return " ".join(first_three)
 
 
-def valid_date(day: date) -> bool:
-    return day <= days_ago(days=7)
+def invalid_date(day: date) -> bool:
+    '''
+    Returns True if the date is invalid, else returns false
+    '''
+    return day <= days_ago(days=7) if DAYS_AGO else False
 
 
-def process_line(work: workTime.WorkTime) -> dict[str, int | str | Decimal]:
-    dec_default = "0"
-    line: dict[str, int | str | Decimal] = {
-        "description": clean_name(name=remove_phase_code(input_string=work.name)),
-        "eqip. no.": "56.1077",
-        "phase code": get_phase_code(work.name),
-        "SAT ST": Decimal(value=dec_default), "sat ot": Decimal(value=dec_default),
-        "SUN ST": Decimal(value=dec_default), "sun ot": Decimal(value=dec_default),
-        "MON ST": Decimal(value=dec_default), "mon ot": Decimal(value=dec_default),
-        "TUE ST": Decimal(value=dec_default), "tue ot": Decimal(value=dec_default),
-        "WED ST": Decimal(value=dec_default), "wed ot": Decimal(value=dec_default),
-        "THU ST": Decimal(value=dec_default), "thu ot": Decimal(value=dec_default),
-        "FRI ST": Decimal(value=dec_default), "fri ot": Decimal(value=dec_default),
-        "TOT ST": Decimal(value=dec_default), "tot ot": Decimal(value=dec_default),
-    }
-    to_st = Decimal(value='0')  # total standard time
-    to_ot = Decimal(value='0')  # total over time
-    for block in work.work_blocks:
-        if DAYS_AGO:
-            if valid_date(block.day):
-                continue
-        week_day: str = get_week_day(date_obj=block.day)
-        mx_hrs = Decimal("8")  # max standard hours
-        standard_word: str = week_day.upper()[:3]  # short capital week day (standard time) "MON"
-        overtime_word: str = standard_word.lower()  # short lower week day "mon"
-        standard_word += " ST"  # "MON ST"
-        overtime_word += " ot"  # "mon ot"
-        st: Decimal = timedelta_to_decimal_hours(time_delta=block.final_line.total_time)  # standard time
-
-        # process to closest 15 min (25% of 60 mins)
-        fractional: Decimal = st % Decimal(value='1')  # 00 . XX
-        percent: Decimal = (fractional % Decimal(value='0.25')) / Decimal(value='0.25')  # to next 25%
-        if percent != Decimal(value="0.0"):
-            if percent > Decimal(value="0.5"):
-                # move to next 25
-                to_move: Decimal = Decimal(value='1') - percent
-                st += (to_move * Decimal(value='0.25'))
-            else:
-                # drop to last 25
-                st -= (percent * Decimal(value='0.25'))
-
-        st = st.normalize()
-        ot: Decimal = Decimal(value="0")  # overtime
-        if st > mx_hrs:
-            ot = st - mx_hrs
-            st = mx_hrs
-        ot = ot.normalize()
-
-        line[standard_word] = st
-        to_st += st
-        line[overtime_word] = ot
-        to_ot += ot
-    line["TOT ST"] = to_st.normalize()
-    line["tot ot"] = to_ot.normalize()
-    return line
