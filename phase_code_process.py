@@ -19,14 +19,14 @@ from decimal import Decimal
 import pandas
 
 import workTime
-from helper_functions import (get_phase_code, get_week_day,
-                              invalid_date, name_from_phase_code,
-                              remove_phase_code, sanitized_first_three_words,
+from helper_functions import (get_phase_code, get_week_day, invalid_date,
+                              name_from_phase_code,
+                              sanitized_first_three_words,
                               timedelta_to_decimal_hours)
-
 
 # TODO:
 # [ ] Refactor this into more defined functions
+
 
 def process_line(work: workTime.WorkTime) -> dict[str, int | str | Decimal]:
     """
@@ -41,7 +41,7 @@ def process_line(work: workTime.WorkTime) -> dict[str, int | str | Decimal]:
     name: str = name_from_phase_code(phase_code=get_phase_code(input_string=work.name))
     dec_default = "0"
     line: dict[str, int | str | Decimal] = {
-        "description": sanitized_first_three_words(name=remove_phase_code(input_string=work.name)),
+        "description": sanitized_first_three_words(name=name),
         "eqip. no.": "56.1077",
         "phase code": get_phase_code(work.name),
         "SAT ST": Decimal(value=dec_default), "sat ot": Decimal(value=dec_default),
