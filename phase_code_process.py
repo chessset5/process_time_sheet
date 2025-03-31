@@ -185,7 +185,8 @@ def run_phase_sheet(headers: list[str], phase_sheet: pandas.DataFrame) -> pandas
         if idx < 3:
             continue
         values: list[decimal.Decimal] = phase_sheet[col_name].dropna().to_list()
-        total_line[col_name] = functools.reduce(lambda x, y: x + y, values)
+        if values: # reduce only works if values has values.
+            total_line[col_name] = functools.reduce(lambda x, y: x + y, values)
 
     # blank row
     # phase_sheet.loc[len(phase_sheet)] = [None] * len(phase_sheet.columns)
@@ -194,6 +195,8 @@ def run_phase_sheet(headers: list[str], phase_sheet: pandas.DataFrame) -> pandas
     phase_sheet.loc["Total"] = total_line
     phase_sheet.replace(to_replace=pandas.NA, value="", inplace=True)
 
+    # TODO:
+    # [ ] put the md into helper function or something
     md: str = phase_sheet.to_markdown()
 
     md_file = r"./envHidden/export/phase_sheet.md"

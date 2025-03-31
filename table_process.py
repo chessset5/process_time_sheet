@@ -71,7 +71,8 @@ def proc_table(work_list: list[workTime.WorkTime]) -> pandas.DataFrame:
         "2nd Lunch In",
         "2nd PM Rest Break (yes)",
         "Time Out (10hr)",
-        "",
+        "Make up hours",
+        ","*len("......................."),
         "hours punched:",
     ]
     time_sheet: dict[str, list[str]] = {}
@@ -142,35 +143,40 @@ def proc_table(work_list: list[workTime.WorkTime]) -> pandas.DataFrame:
                 hours_worked += time_diff(lunch_in, time_out)
 
         time_card: list[str | time] = []
-        spacer = "." * len("----------")
+        spacer: str = "." * len("----------")
+        break_val: str = "Yes"
         time_card.append(time_to_12_string(time_in))  # time in
-        time_card.append("Yes")  # first break
+        time_card.append(break_val)  # first break
         time_card.append(time_to_12_string(lunch_out))  # first lunch out
         time_card.append(time_to_12_string(lunch_in))  # first lunch in
-        time_card.append("Yes")  # second break
+        time_card.append(break_val)  # second break
 
-        # if punched more than 10 hours:
         if total_hours >= timedelta(hours=10):
+            # if punched more than 10 hours:
             time_card.append("")  # <10hr punch out
-            time_card.append(spacer)  # spacer
+            time_card.append(spacer)
             time_card.append(time_to_12_string(second_lunch_out))  # second lunch out
             time_card.append(time_to_12_string(second_lunch_in))  # second lunch in
-            time_card.append("Yes")  # third break
-            time_card.append(time_out)  # >10hr punch out
+            time_card.append(break_val)  # third break
+            time_card.append(time_to_12_string(time_out))  # >10hr punch out
         else:
-            time_card.append(time_out)  # <10hr punch out
-            time_card.append(spacer)  # spacer
+            # else time less than 10hrs, 10hr block
+            time_card.append(time_to_12_string(time_out))  # <10hr punch out
+            time_card.append(spacer)
             time_card.append("")  # second lunch out
             time_card.append("")  # second lunch in
             time_card.append("")  # third break
             time_card.append("")  # >10hr punch out
-        time_card.append("")
+        time_card.append("")  # make up hours
+        time_card.append(spacer)
         time_card.append(f"{timedelta_to_decimal_hours(hours_worked).quantize(Decimal('0.00'))} hrs")  # num hours
 
         time_sheet.update({day: time_card})
 
     table_df: pandas.DataFrame = pandas.DataFrame(data=time_sheet, columns=header, index=index)
 
+    # TODO:
+    # [ ] put md into helper value
     md: str = table_df.to_markdown()
 
     md_file = r"./envHidden/export/time_table.md"
@@ -178,9 +184,5 @@ def proc_table(work_list: list[workTime.WorkTime]) -> pandas.DataFrame:
     with open(file=md_file, mode="w", encoding="utf-8") as f:
         f.write(md)
 
-    md_file = r"./envHidden/export/dyn_time_table.md"
-    md_file: str = os.path.normpath(md_file)
-    with open(file=md_file, mode="w", encoding="utf-8") as f:
-        f.write(md)
 
     return table_df
