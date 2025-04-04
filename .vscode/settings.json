@@ -1,6 +1,8 @@
 {
-"cSpell.words": [
-    "idxs"
-],
-"python.analysis.typeCheckingMode": "basic"
+  "cSpell.words": ["idxs"],
+  "python.analysis.typeCheckingMode": "basic",
+  "python.terminal.activateEnvironment": true,
+  "python.terminal.activateEnvInCurrentTerminal": true,
+  "python.pipenvPath": "/Users/aaronshackelford/.conda/envs/worktime/bin/pip",
+  "python.defaultInterpreterPath": "/Users/aaronshackelford/.conda/envs/worktime/bin/python3"
 }
