@@ -94,7 +94,7 @@ def process_line(work: workTime.WorkTime) -> dict[str, int | str | Decimal]:
     return line
 
 
-def process_work_times(work_list: list[workTime.WorkTime]) -> pandas.DataFrame:
+def process_work_times(work_list: list[workTime.WorkTime]) -> pandas.DataFrame | None:
     """
     Processes work into phase code sheet
 
@@ -105,7 +105,7 @@ def process_work_times(work_list: list[workTime.WorkTime]) -> pandas.DataFrame:
         pandas.DataFrame: pandas dataframe of work in the shape of the phase code sheet
     """
     if not work_list:
-        return
+        return None
 
     # Define the header
     headers: list[str] = [

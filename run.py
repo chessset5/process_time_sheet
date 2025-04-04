@@ -150,9 +150,10 @@ def process_time_card() -> None:
         futures.append(executor.submit(process_work_times, copy.deepcopy(work_times)))
 
     for future in futures:
-        a: pandas.DataFrame = future.result()
-        print(a.to_markdown())
-        print()
+        a: pandas.DataFrame | None = future.result()
+        if isinstance(a,pandas.DataFrame):
+            print(a.to_markdown())
+            print()
 
 
 def main() -> None:

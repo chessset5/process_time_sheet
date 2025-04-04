@@ -38,7 +38,7 @@ def is_minutes_apart(time1: time, time2: time, minutes: int = 30) -> bool:
     return abs(dt1 - dt2) == timedelta(minutes=minutes)
 
 
-def time_to_12_string(time_obj: time | dt) -> str:
+def time_to_12_string(time_obj: time | dt | None) -> str:
     """
     Converts a time or dt object to a 12-hour formatted string.
 
@@ -55,7 +55,9 @@ def time_to_12_string(time_obj: time | dt) -> str:
         >>> time_to_12_string(time(9, 15))
         '09:15 AM'
     """
-    return time_obj.strftime(format="%I:%M %p")
+    if time_obj:
+        return time_obj.strftime(format="%I:%M %p")
+    return ""
 
 
 def parse_date(date_str: str) -> dt:

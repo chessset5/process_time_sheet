@@ -23,7 +23,7 @@ from helper_functions import (get_week_day, invalid_date,
                               timedelta_to_decimal_hours)
 
 
-def proc_table(work_list: list[workTime.WorkTime]) -> pandas.DataFrame:
+def proc_table(work_list: list[workTime.WorkTime]) -> pandas.DataFrame | None:
     """
     Takes in a WorkTime object and creates its punch card.
 
@@ -35,7 +35,7 @@ def proc_table(work_list: list[workTime.WorkTime]) -> pandas.DataFrame:
     """
 
     if not work_list:
-        return
+        return None
 
     # loading times into respective days
     punch_week: defaultdict[str, list[workTime.ClockLine]] = defaultdict(list[workTime.ClockLine])
@@ -88,12 +88,12 @@ def proc_table(work_list: list[workTime.WorkTime]) -> pandas.DataFrame:
         punch_index = 2
         cur_punch: workTime.ClockLine = punch_list[0]
         next_punch: workTime.ClockLine = punch_list[1]
-        time_in: time | str = cur_punch.start_time
-        lunch_out: time | str = ""
-        lunch_in: time | str = ""
-        time_out: time | str = ""
-        second_lunch_out: time | str = ""
-        second_lunch_in: time | str = ""
+        time_in: time | None = cur_punch.start_time
+        lunch_out: time | None = None
+        lunch_in: time | None = None
+        time_out: time | None = None
+        second_lunch_out: time | None = None
+        second_lunch_in: time | None = None
         # second time out is just the first time out
 
         seen_blocks: set[workTime.ClockLine] = set()
@@ -142,7 +142,7 @@ def proc_table(work_list: list[workTime.WorkTime]) -> pandas.DataFrame:
             if lunch_in and time_out:
                 hours_worked += time_diff(lunch_in, time_out)
 
-        time_card: list[str | time] = []
+        time_card: list[str] = []
         spacer: str = "." * len("----------")
         break_val: str = "Yes"
         time_card.append(time_to_12_string(time_in))  # time in
