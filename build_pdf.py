@@ -19,6 +19,9 @@ import pypdf
 from filelock import FileLock, Timeout
 from pandas import DataFrame, Series
 from pypdf.generic import NameObject, TextStringObject
+import pypdf.generic
+
+from typing import Any
 
 from helper_functions import this_friday
 
@@ -124,9 +127,12 @@ def __build_reference_time_sheet_data_frame() -> DataFrame:
         data.update({index[row]: col_list})
 
     # Create an empty DataFrame with the specified header and index
-    time_card: pandas.DataFrame = pandas.DataFrame(columns=header, index=index, data=data)
+    time_card: pandas.DataFrame = pandas.DataFrame(index=header, data=data)
 
-    return time_card
+    # cause I am an idiot and set this up sideways
+    transposed: DataFrame = time_card.transpose()
+
+    return transposed
 
 
 def __build_reference_phase_code_data_frame() -> DataFrame:
@@ -177,10 +183,12 @@ def __build_reference_phase_code_data_frame() -> DataFrame:
         data.update({index[row]: col_list})
 
     # Create an empty DataFrame with the specified header and index
-    phase_sheet: pandas.DataFrame = pandas.DataFrame(columns=headers, index=index, data=data)
+    # cause I am an idiot and set this up sideways (index = headers).transpose()
+    phase_sheet: pandas.DataFrame = pandas.DataFrame(index=headers, data=data)
+    phase_sheet = phase_sheet.transpose()
 
     # Set the values for 'description', 'eqip. no.' and 'phase code' for rows 'PTO' to 'Bereavement'
-    phase_sheet.loc["PTO":"Bereavement", ["eqip. no.", "phase code"]] = [
+    phase_sheet.loc["Bereavement":"PTO", ["eqip. no.", "phase code"]] = [
         "56.1077",
         "10.010.0023",
     ]
@@ -195,6 +203,19 @@ def __build_reference_phase_code_data_frame() -> DataFrame:
 
     return phase_sheet
 
+def find_df_location(df:pandas.DataFrame, find_value:Any) -> tuple[Any,Any]:
+    '''
+    Find Data Frame Location, returns where a find value is
+
+    Args:
+        df (pandas.DataFrame): data frame to look through
+        find_value (Any): value to find in the data frame
+
+    Returns:
+        tuple[Any,Any]: tuple of locations where the value occurs
+    '''
+    locations:list[tuple[Any,Any]] = (df == find_value).stack().loc[lambda x: x].index.tolist()
+    return locations[0]
 
 def build_out_pdf(phase_sheet: DataFrame, time_card: DataFrame, card_info: dict[str, str]) -> None:
     '''
@@ -213,9 +234,6 @@ def build_out_pdf(phase_sheet: DataFrame, time_card: DataFrame, card_info: dict[
         }
         ```
     '''
-    # TODO:
-    # [ ] build a cache of the pdf for improved speed. No need to load it every time...
-    #       - perhaps a map instead?
 
     reference_phase_sheet: DataFrame = __build_reference_phase_code_data_frame()
     reference_time_card: DataFrame = __build_reference_time_sheet_data_frame()
@@ -230,18 +248,8 @@ def build_out_pdf(phase_sheet: DataFrame, time_card: DataFrame, card_info: dict[
         input_pdf_path_lock: str = input_pdf_path + ".lock"
 
         out_file_name: str = PDF_FILE_NAME.replace("YYYYMMDD", this_friday().strftime("%Y%m%d"))
-        off_set: int = PDF_FILE_NAME.rfind(os.path.basename(PDF_FILE_NAME))
+        off_set: int = len(PDF_PATH.removesuffix(os.path.basename(PDF_FILE_NAME)))
         output_pdf_path: str = os.path.normpath(PDF_PATH[:off_set] + out_file_name)
-
-        # TODO
-        # [ ] REWRITE THIS SECTION
-
-        # Rewrite sudo
-        # copy input pdf to output pdf
-        # loop through output pdf values
-        # if value in reference phase code, reference time card, or card_info
-        #   get corresponding location in phase code, time card, or card_info
-        #   replace pdf value with corresponding value
 
         pdf_in_memory:io.BytesIO = io.BytesIO()
 
@@ -251,24 +259,62 @@ def build_out_pdf(phase_sheet: DataFrame, time_card: DataFrame, card_info: dict[
                 f.seek(0)
                 pdf_in_memory.write(f.read())
 
-
-
         with open(file=output_pdf_path, mode='wb') as output_pdf:
-            reader = pypdf.PdfReader(stream=pdf_in_memory.read())
+            reader = pypdf.PdfReader(stream=pdf_in_memory)
             writer = pypdf.PdfWriter()
 
             # Loop through pages and look for fields
             for page in reader.pages:
-                if '/Annots' in page:
-                    annots = page
-                    for annotation in page['/Annots']:
-                        annot_obj = annotation.get_object()
+                if page.annotations:
+                    for annotation in page.annotations:
+                        annot_obj:pypdf.generic.DictionaryObject = annotation.get_object()
                         if '/V' in annot_obj:
-                            
+                            pdf_value:str = str(annot_obj['/V'])
 
+                            if pdf_value in card_info:
+                                annot_obj.update({
+                                    NameObject(object='/V'): TextStringObject(value=str(card_info[pdf_value]))
+                                })
+                                continue
+
+                            if pdf_value in reference_phase_sheet.values:
+                                location: tuple[Any, Any] = find_df_location(df=reference_phase_sheet,find_value=pdf_value)
+                                if location in phase_sheet:
+                                    if phase_sheet[location] is pandas.NA:
+                                        # put blank string
+                                        annot_obj.update({
+                                            NameObject(object='/V'): TextStringObject(value=str(""))
+                                        })
+                                        continue
+                                    else:
+                                        new_value: DataFrame = phase_sheet.loc[location]
+                                        annot_obj.update({
+                                            NameObject(object='/V'): TextStringObject(value=str(new_value))
+                                        })
+                                        continue
+
+                            if pdf_value in reference_time_card.values:
+                                location: tuple[Any, Any] = find_df_location(df=reference_time_card,find_value=pdf_value)
+                                if location in time_card:
+                                    if time_card.loc[location] is pandas.NA:
+                                        # put blank string
+                                        annot_obj.update({
+                                            NameObject(object='/V'): TextStringObject(value=str(""))
+                                        })
+                                        continue
+                                    else:
+                                        new_value: DataFrame = time_card.loc[location]
+                                        annot_obj.update({
+                                            NameObject(object='/V'): TextStringObject(value=str(new_value))
+                                        })
+                                        continue
+
+                            # Default Case
+                            # make it a blank string after testing
                             annot_obj.update({
-                                NameObject('/V'): TextStringObject('John Doe')
-                            })
+                                    NameObject(object='/V'): TextStringObject(value=str("UPDATE THIS TARGET VALUE!"))
+                                })
+
                 writer.add_page(page)
 
             writer.write(output_pdf)
@@ -279,3 +325,7 @@ def build_out_pdf(phase_sheet: DataFrame, time_card: DataFrame, card_info: dict[
         pass
     finally:
         return
+
+
+if __name__ == "__main__":
+    build_out_pdf(phase_sheet=pandas.DataFrame(),time_card=pandas.DataFrame(),card_info={})
