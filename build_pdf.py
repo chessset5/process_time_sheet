@@ -10,13 +10,17 @@
  builds out timecard pdf for user
  '''
 
-
-import pypdf
-from pypdf.generic import NameObject, TextStringObject
+import io
+import os
+import sys
 
 import pandas
+import pypdf
+from filelock import FileLock, Timeout
 from pandas import DataFrame, Series
+from pypdf.generic import NameObject, TextStringObject
 
+from helper_functions import this_friday
 
 # pylint: disable=C0301
 # '''
@@ -213,4 +217,65 @@ def build_out_pdf(phase_sheet: DataFrame, time_card: DataFrame, card_info: dict[
     # [ ] build a cache of the pdf for improved speed. No need to load it every time...
     #       - perhaps a map instead?
 
-    pass
+    reference_phase_sheet: DataFrame = __build_reference_phase_code_data_frame()
+    reference_time_card: DataFrame = __build_reference_time_sheet_data_frame()
+
+    # try to write pdf
+    try:
+        from envHidden.data.file_locations import PDF_PATH
+        from envHidden.envSecret import PDF_FILE_NAME
+
+        # Open the PDF file
+        input_pdf_path: str = os.path.normpath(PDF_PATH)
+        input_pdf_path_lock: str = input_pdf_path + ".lock"
+
+        out_file_name: str = PDF_FILE_NAME.replace("YYYYMMDD", this_friday().strftime("%Y%m%d"))
+        off_set: int = PDF_FILE_NAME.rfind(os.path.basename(PDF_FILE_NAME))
+        output_pdf_path: str = os.path.normpath(PDF_PATH[:off_set] + out_file_name)
+
+        # TODO
+        # [ ] REWRITE THIS SECTION
+
+        # Rewrite sudo
+        # copy input pdf to output pdf
+        # loop through output pdf values
+        # if value in reference phase code, reference time card, or card_info
+        #   get corresponding location in phase code, time card, or card_info
+        #   replace pdf value with corresponding value
+
+        pdf_in_memory:io.BytesIO = io.BytesIO()
+
+        lock = FileLock(input_pdf_path_lock)
+        with lock:
+            with open(file=input_pdf_path,mode="rb") as f:
+                f.seek(0)
+                pdf_in_memory.write(f.read())
+
+
+
+        with open(file=output_pdf_path, mode='wb') as output_pdf:
+            reader = pypdf.PdfReader(stream=pdf_in_memory.read())
+            writer = pypdf.PdfWriter()
+
+            # Loop through pages and look for fields
+            for page in reader.pages:
+                if '/Annots' in page:
+                    annots = page
+                    for annotation in page['/Annots']:
+                        annot_obj = annotation.get_object()
+                        if '/V' in annot_obj:
+                            
+
+                            annot_obj.update({
+                                NameObject('/V'): TextStringObject('John Doe')
+                            })
+                writer.add_page(page)
+
+            writer.write(output_pdf)
+
+        print(f"Updated PDF saved to {output_pdf_path}")
+        # [ ] END REWRITE THIS SECTION
+    except:
+        pass
+    finally:
+        return

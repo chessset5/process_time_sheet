@@ -1,3 +1,6 @@
 {
-  "cSpell.words": ["idxs"]
+"cSpell.words": [
+    "idxs"
+],
+"python.analysis.typeCheckingMode": "basic"
 }
