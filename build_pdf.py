@@ -1,27 +1,27 @@
 #!/usr/bin/python3
+# -*- coding: utf-8 -*-
 '''
 # -*- coding: utf-8 -*-
- # @ Author: Aaron Shackelford
- # @ Create Time: 2025-03-30 12:47:16
- # @ Modified by: Aaron Shackelford
- # @ Modified time: 2025-03-30 18:27:20
- # @ Description:
+# @ Author: Aaron Shackelford
+# @ Create Time: 2025-03-30 12:47:16
+# @ Modified by: Aaron Shackelford
+# @ Modified time: 2025-03-30 18:27:20
+# @ Description:
 
- builds out timecard pdf for user
- '''
+builds out timecard pdf for user
+'''
+# @chessset5
+# @Loki-waterAIC
 
 import io
 import os
-import sys
+from typing import Any
 
 import pandas
 import pypdf
-from filelock import FileLock, Timeout
-from pandas import DataFrame, Series
-from pypdf.generic import NameObject, TextStringObject
 import pypdf.generic
-
-from typing import Any
+from pandas import DataFrame
+from pypdf.generic import NameObject, TextStringObject
 
 from helper_functions import this_friday
 
@@ -240,12 +240,10 @@ def build_out_pdf(phase_sheet: DataFrame, time_card: DataFrame, card_info: dict[
 
     # try to write pdf
     try:
-        from envHidden.data.file_locations import PDF_PATH
-        from envHidden.envSecret import PDF_FILE_NAME
+        from envHidden.data.file_locations import PDF_PATH # pylint: disable=C0415
+        from envHidden.envSecret import PDF_FILE_NAME # pylint: disable=C0415
 
-        # Open the PDF file
         input_pdf_path: str = os.path.normpath(PDF_PATH)
-        input_pdf_path_lock: str = input_pdf_path + ".lock"
 
         out_file_name: str = PDF_FILE_NAME.replace("YYYYMMDD", this_friday().strftime("%Y%m%d"))
         off_set: int = len(PDF_PATH.removesuffix(os.path.basename(PDF_FILE_NAME)))
@@ -253,12 +251,12 @@ def build_out_pdf(phase_sheet: DataFrame, time_card: DataFrame, card_info: dict[
 
         pdf_in_memory:io.BytesIO = io.BytesIO()
 
-        lock = FileLock(input_pdf_path_lock)
-        with lock:
-            with open(file=input_pdf_path,mode="rb") as f:
-                f.seek(0)
-                pdf_in_memory.write(f.read())
+        # load file into memory
+        with open(file=input_pdf_path,mode="rb") as f:
+            f.seek(0)
+            pdf_in_memory.write(f.read())
 
+        # create the output file
         with open(file=output_pdf_path, mode='wb') as output_pdf:
             reader = pypdf.PdfReader(stream=pdf_in_memory)
             writer = pypdf.PdfWriter()
@@ -275,7 +273,6 @@ def build_out_pdf(phase_sheet: DataFrame, time_card: DataFrame, card_info: dict[
                                 annot_obj.update({
                                     NameObject(object='/V'): TextStringObject(value=str(card_info[pdf_value]))
                                 })
-                                continue
 
                             if pdf_value in reference_phase_sheet.values:
                                 location: tuple[Any, Any] = find_df_location(df=reference_phase_sheet,find_value=pdf_value)
@@ -285,13 +282,11 @@ def build_out_pdf(phase_sheet: DataFrame, time_card: DataFrame, card_info: dict[
                                         annot_obj.update({
                                             NameObject(object='/V'): TextStringObject(value=str(""))
                                         })
-                                        continue
                                     else:
                                         new_value: DataFrame = phase_sheet.loc[location]
                                         annot_obj.update({
                                             NameObject(object='/V'): TextStringObject(value=str(new_value))
                                         })
-                                        continue
 
                             if pdf_value in reference_time_card.values:
                                 location: tuple[Any, Any] = find_df_location(df=reference_time_card,find_value=pdf_value)
@@ -301,13 +296,11 @@ def build_out_pdf(phase_sheet: DataFrame, time_card: DataFrame, card_info: dict[
                                         annot_obj.update({
                                             NameObject(object='/V'): TextStringObject(value=str(""))
                                         })
-                                        continue
                                     else:
                                         new_value: DataFrame = time_card.loc[location]
                                         annot_obj.update({
                                             NameObject(object='/V'): TextStringObject(value=str(new_value))
                                         })
-                                        continue
 
                             # Default Case
                             # make it a blank string after testing
@@ -315,16 +308,15 @@ def build_out_pdf(phase_sheet: DataFrame, time_card: DataFrame, card_info: dict[
                                     NameObject(object='/V'): TextStringObject(value=str("UPDATE THIS TARGET VALUE!"))
                                 })
 
-                writer.add_page(page)
+                writer.add_page(page=page)
 
-            writer.write(output_pdf)
+            writer.write(stream=output_pdf)
 
         print(f"Updated PDF saved to {output_pdf_path}")
-        # [ ] END REWRITE THIS SECTION
-    except:
+
+    except: # pylint: disable=W0702
         pass
-    finally:
-        return
+    return None
 
 
 if __name__ == "__main__":
