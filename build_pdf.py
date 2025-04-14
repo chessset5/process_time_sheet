@@ -21,7 +21,6 @@ import pandas
 import pypdf
 import pypdf.generic
 from pandas import DataFrame
-from pypdf.generic import NameObject, TextStringObject
 
 from helper_functions import this_friday
 
@@ -217,6 +216,23 @@ def find_df_location(df:pandas.DataFrame, find_value:Any) -> tuple[Any,Any]:
     locations:list[tuple[Any,Any]] = (df == find_value).stack().loc[lambda x: x].index.tolist()
     return locations[0]
 
+def get_new_value(pdf_value:str, time_card:DataFrame, reference_time_card:DataFrame, phase_sheet:DataFrame, reference_phase_sheet:DataFrame, card_info:dict) -> str:
+    if pdf_value in card_info:
+        return card_info[pdf_value]
+
+    if pdf_value in reference_phase_sheet.values:
+        location: tuple[Any, Any] = find_df_location(df=reference_phase_sheet,find_value=pdf_value)
+        if location in phase_sheet:
+            if not (phase_sheet[location] is pandas.NA):
+                return str(object=phase_sheet.loc[location])
+
+    if pdf_value in reference_time_card.values:
+        location: tuple[Any, Any] = find_df_location(df=reference_time_card,find_value=pdf_value)
+        if location in time_card:
+            if not (time_card.loc[location] is pandas.NA):
+                return str(object=time_card.loc[location])
+    return ""
+
 def build_out_pdf(phase_sheet: DataFrame, time_card: DataFrame, card_info: dict[str, str]) -> None:
     '''
     Creates pdf for user
@@ -252,63 +268,29 @@ def build_out_pdf(phase_sheet: DataFrame, time_card: DataFrame, card_info: dict[
         pdf_in_memory:io.BytesIO = io.BytesIO()
 
         # load file into memory
-        with open(file=input_pdf_path,mode="rb") as f:
-            f.seek(0)
-            pdf_in_memory.write(f.read())
+        with open(file=input_pdf_path,mode="rb") as key:
+            key.seek(0)
+            pdf_in_memory.write(key.read())
 
         # create the output file
         with open(file=output_pdf_path, mode='wb') as output_pdf:
             reader = pypdf.PdfReader(stream=pdf_in_memory)
             writer = pypdf.PdfWriter()
 
-            # Loop through pages and look for fields
+            # load pages into writer
             for page in reader.pages:
-                if page.annotations:
-                    for annotation in page.annotations:
-                        annot_obj:pypdf.generic.DictionaryObject = annotation.get_object()
-                        if '/V' in annot_obj:
-                            pdf_value:str = str(annot_obj['/V'])
-
-                            if pdf_value in card_info:
-                                annot_obj.update({
-                                    NameObject(object='/V'): TextStringObject(value=str(card_info[pdf_value]))
-                                })
-
-                            if pdf_value in reference_phase_sheet.values:
-                                location: tuple[Any, Any] = find_df_location(df=reference_phase_sheet,find_value=pdf_value)
-                                if location in phase_sheet:
-                                    if phase_sheet[location] is pandas.NA:
-                                        # put blank string
-                                        annot_obj.update({
-                                            NameObject(object='/V'): TextStringObject(value=str(""))
-                                        })
-                                    else:
-                                        new_value: DataFrame = phase_sheet.loc[location]
-                                        annot_obj.update({
-                                            NameObject(object='/V'): TextStringObject(value=str(new_value))
-                                        })
-
-                            if pdf_value in reference_time_card.values:
-                                location: tuple[Any, Any] = find_df_location(df=reference_time_card,find_value=pdf_value)
-                                if location in time_card:
-                                    if time_card.loc[location] is pandas.NA:
-                                        # put blank string
-                                        annot_obj.update({
-                                            NameObject(object='/V'): TextStringObject(value=str(""))
-                                        })
-                                    else:
-                                        new_value: DataFrame = time_card.loc[location]
-                                        annot_obj.update({
-                                            NameObject(object='/V'): TextStringObject(value=str(new_value))
-                                        })
-
-                            # Default Case
-                            # make it a blank string after testing
-                            annot_obj.update({
-                                    NameObject(object='/V'): TextStringObject(value=str("UPDATE THIS TARGET VALUE!"))
-                                })
-
                 writer.add_page(page=page)
+
+            # Loop through pages and look for fields
+            fields: dict[str, Any] | None = reader.get_fields()
+            if fields:
+                for key in fields:
+                    field:pypdf.generic.Field = fields[key]
+                    field_val:str = ""
+                    if field.value is not None:
+                        field_val = str(object=field.value)
+                    new_val: str = get_new_value(pdf_value=field_val,time_card=time_card,reference_time_card=reference_time_card,phase_sheet=phase_sheet,reference_phase_sheet=reference_phase_sheet,card_info=card_info)
+                    writer.update_page_form_field_values(page=writer.pages, fields={key: new_val})
 
             writer.write(stream=output_pdf)
 
