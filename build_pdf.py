@@ -202,7 +202,8 @@ def __build_reference_phase_code_data_frame() -> DataFrame:
 
     return phase_sheet
 
-def find_df_location(df:pandas.DataFrame, find_value:Any) -> tuple[Any,Any]:
+
+def find_df_location(df: pandas.DataFrame, find_value: Any) -> tuple[Any, Any]:
     '''
     Find Data Frame Location, returns where a find value is
 
@@ -213,25 +214,40 @@ def find_df_location(df:pandas.DataFrame, find_value:Any) -> tuple[Any,Any]:
     Returns:
         tuple[Any,Any]: tuple of locations where the value occurs
     '''
-    locations:list[tuple[Any,Any]] = (df == find_value).stack().loc[lambda x: x].index.tolist()
+    locations: list[tuple[Any, Any]] = (df == find_value).stack().loc[lambda x: x].index.tolist()
     return locations[0]
 
-def get_new_value(pdf_value:str, time_card:DataFrame, reference_time_card:DataFrame, phase_sheet:DataFrame, reference_phase_sheet:DataFrame, card_info:dict) -> str:
+
+def get_new_value(pdf_value: str, time_card: DataFrame, reference_time_card: DataFrame, phase_sheet: DataFrame, reference_phase_sheet: DataFrame, card_info: dict) -> str:
+    '''returns the value based off the reference value
+
+    Args:
+        pdf_value (str): target value
+        time_card (DataFrame): dataframe to get timecard data from
+        reference_time_card (DataFrame): dataframe to get target location from
+        phase_sheet (DataFrame): dataframe to get phase sheet data from
+        reference_phase_sheet (DataFrame): dataframe to get target location from
+        card_info (dict): dictionary with misc data
+
+    Returns:
+        str: replacement string
+    '''
     if pdf_value in card_info:
         return card_info[pdf_value]
 
     if pdf_value in reference_phase_sheet.values:
-        location: tuple[Any, Any] = find_df_location(df=reference_phase_sheet,find_value=pdf_value)
-        if location in phase_sheet:
-            if not (phase_sheet[location] is pandas.NA):
-                return str(object=phase_sheet.loc[location])
+        if pdf_value == "A.1.0":
+            pause = True
+        location: tuple[Any, Any] = find_df_location(df=reference_phase_sheet, find_value=pdf_value)
+        if not (phase_sheet.loc[location] is pandas.NA):
+            return str(object=phase_sheet.loc[location])
 
     if pdf_value in reference_time_card.values:
-        location: tuple[Any, Any] = find_df_location(df=reference_time_card,find_value=pdf_value)
-        if location in time_card:
-            if not (time_card.loc[location] is pandas.NA):
-                return str(object=time_card.loc[location])
+        location: tuple[Any, Any] = find_df_location(df=reference_time_card, find_value=pdf_value)
+        if not (time_card.loc[location] is pandas.NA):
+            return str(object=time_card.loc[location])
     return ""
+
 
 def build_out_pdf(phase_sheet: DataFrame, time_card: DataFrame, card_info: dict[str, str]) -> None:
     '''
@@ -256,8 +272,8 @@ def build_out_pdf(phase_sheet: DataFrame, time_card: DataFrame, card_info: dict[
 
     # try to write pdf
     try:
-        from envHidden.data.file_locations import PDF_PATH # pylint: disable=C0415
-        from envHidden.envSecret import PDF_FILE_NAME # pylint: disable=C0415
+        from envHidden.data.file_locations import PDF_PATH  # pylint: disable=C0415
+        from envHidden.envSecret import PDF_FILE_NAME  # pylint: disable=C0415
 
         input_pdf_path: str = os.path.normpath(PDF_PATH)
 
@@ -265,10 +281,10 @@ def build_out_pdf(phase_sheet: DataFrame, time_card: DataFrame, card_info: dict[
         off_set: int = len(PDF_PATH.removesuffix(os.path.basename(PDF_FILE_NAME)))
         output_pdf_path: str = os.path.normpath(PDF_PATH[:off_set] + out_file_name)
 
-        pdf_in_memory:io.BytesIO = io.BytesIO()
+        pdf_in_memory: io.BytesIO = io.BytesIO()
 
         # load file into memory
-        with open(file=input_pdf_path,mode="rb") as key:
+        with open(file=input_pdf_path, mode="rb") as key:
             key.seek(0)
             pdf_in_memory.write(key.read())
 
@@ -277,29 +293,30 @@ def build_out_pdf(phase_sheet: DataFrame, time_card: DataFrame, card_info: dict[
             reader = pypdf.PdfReader(stream=pdf_in_memory)
             writer = pypdf.PdfWriter()
 
-            # load pages into writer
-            for page in reader.pages:
-                writer.add_page(page=page)
+            # clone attributes
+            writer.clone_reader_document_root(reader)
 
             # Loop through pages and look for fields
             fields: dict[str, Any] | None = reader.get_fields()
+            updates: dict[str, str] = {}
             if fields:
                 for key in fields:
-                    field:pypdf.generic.Field = fields[key]
-                    field_val:str = ""
+                    field: pypdf.generic.Field = fields[key]
+                    field_val: str = ""
                     if field.value is not None:
                         field_val = str(object=field.value)
-                    new_val: str = get_new_value(pdf_value=field_val,time_card=time_card,reference_time_card=reference_time_card,phase_sheet=phase_sheet,reference_phase_sheet=reference_phase_sheet,card_info=card_info)
-                    writer.update_page_form_field_values(page=writer.pages, fields={key: new_val})
+                        updates[key] = get_new_value(pdf_value=field_val, time_card=time_card, reference_time_card=reference_time_card, phase_sheet=phase_sheet, reference_phase_sheet=reference_phase_sheet, card_info=card_info)
+
+            writer.update_page_form_field_values(page=writer.pages[0], fields=updates, auto_regenerate=False)
 
             writer.write(stream=output_pdf)
 
         print(f"Updated PDF saved to {output_pdf_path}")
 
-    except: # pylint: disable=W0702
+    except:  # pylint: disable=W0702
         pass
     return None
 
 
 if __name__ == "__main__":
-    build_out_pdf(phase_sheet=pandas.DataFrame(),time_card=pandas.DataFrame(),card_info={})
+    build_out_pdf(phase_sheet=pandas.DataFrame(), time_card=pandas.DataFrame(), card_info={})
