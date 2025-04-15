@@ -19,9 +19,12 @@ import pandas
 
 import workTime
 from helper_functions import (is_valid_date, parse_am_pm_time, parse_date,
-                              time_string_to_timedelta)
+                              time_string_to_timedelta, this_friday)
 from phase_code_process import process_work_times
 from table_process import proc_table
+from build_pdf import build_out_pdf
+from envHidden.envSecret import EMPLOYEE_NAME, EMPLOYEE_NUMBER
+
 
 # pylint: disable=C0301
 # '''
@@ -144,16 +147,27 @@ def process_time_card() -> None:
         work: workTime.WorkTime = process_csv_file(csv_file)
         work_times.append(work)
 
-    futures: list[Future] = []
+    table_future:Future = Future()
+    work_future:Future = Future()
     with ThreadPoolExecutor() as executor:
-        futures.append(executor.submit(proc_table, copy.deepcopy(work_times)))
-        futures.append(executor.submit(process_work_times, copy.deepcopy(work_times)))
+        table_future=executor.submit(proc_table, copy.deepcopy(work_times))
+        work_future=executor.submit(process_work_times, copy.deepcopy(work_times))
 
-    for future in futures:
-        a: pandas.DataFrame | None = future.result()
-        if isinstance(a,pandas.DataFrame):
-            print(a.to_markdown())
-            print()
+    table_df:pandas.DataFrame | None = table_future.result()
+    work_df: pandas.DataFrame | None = work_future.result()
+    if table_df is not None and work_df is not None:
+        print(table_df.to_markdown())
+        print(work_df.to_markdown())
+        print()
+
+        card_info: dict[str, str] = {
+            "Employee Name": EMPLOYEE_NAME,
+            "Vehicle Number": "",
+            "Employee Number": EMPLOYEE_NUMBER,
+            "Payroll Period Ending": this_friday().strftime(format="%m/%d/%Y")
+        }
+        build_out_pdf(phase_sheet=work_df,time_card=table_df,card_info=card_info)
+
 
 
 def main() -> None:
