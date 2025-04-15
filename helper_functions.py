@@ -10,7 +10,7 @@ from decimal import Decimal
 
 
 VALIDATE_DATE = True
-DEBUGGING = False
+DEBUGGING = True
 
 def is_minutes_apart(time1: time, time2: time, minutes: int = 30) -> bool:
     """
@@ -338,6 +338,6 @@ def invalid_date(day: date) -> bool:
     Returns True if the date is invalid, else returns false
     '''
     if DEBUGGING:
-        return day <= date(year=2025,month=3,day=21) if VALIDATE_DATE else False
+        return day <= date(year=2025,month=3,day=23) if VALIDATE_DATE else False
     return day <= last_friday() if VALIDATE_DATE else False
 
