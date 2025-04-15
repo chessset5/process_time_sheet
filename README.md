@@ -51,4 +51,6 @@ The output formate will be like so:
 pip install pypdf
 pip install pandas
 pip install pynput
+pip install fillpdf
+conda install -c conda-forge poppler
 ```
