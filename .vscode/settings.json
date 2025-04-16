@@ -1,5 +1,8 @@
 {
-  "cSpell.words": ["idxs"],
+  "cSpell.words": [
+    "fillpdf",
+    "idxs"
+],
   "python.analysis.typeCheckingMode": "basic",
   "python.terminal.activateEnvironment": true,
   "python.terminal.activateEnvInCurrentTerminal": true,
