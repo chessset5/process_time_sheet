@@ -13,13 +13,12 @@ builds out timecard pdf for user
 # @chessset5
 # @Loki-waterAIC
 
-import io
+
 import os
 from typing import Any
 
 import pandas
-import pypdf
-import pypdf.generic
+from fillpdf import fillpdfs
 from pandas import DataFrame
 
 from helper_functions import this_friday
@@ -236,8 +235,6 @@ def get_new_value(pdf_value: str, time_card: DataFrame, reference_time_card: Dat
         return card_info[pdf_value]
 
     if pdf_value in reference_phase_sheet.values:
-        if pdf_value == "A.1.0":
-            pause = True
         location: tuple[Any, Any] = find_df_location(df=reference_phase_sheet, find_value=pdf_value)
         if not (phase_sheet.loc[location] is pandas.NA):
             return str(object=phase_sheet.loc[location])
@@ -272,7 +269,8 @@ def build_out_pdf(phase_sheet: DataFrame, time_card: DataFrame, card_info: dict[
 
     # try to write pdf
     try:
-        from envHidden.data.file_locations import PDF_PATH  # pylint: disable=C0415
+        from envHidden.data.file_locations import \
+            PDF_PATH  # pylint: disable=C0415
         from envHidden.envSecret import PDF_FILE_NAME  # pylint: disable=C0415
 
         input_pdf_path: str = os.path.normpath(PDF_PATH)
@@ -281,35 +279,14 @@ def build_out_pdf(phase_sheet: DataFrame, time_card: DataFrame, card_info: dict[
         off_set: int = len(PDF_PATH.removesuffix(os.path.basename(PDF_FILE_NAME)))
         output_pdf_path: str = os.path.normpath(PDF_PATH[:off_set] + out_file_name)
 
-        pdf_in_memory: io.BytesIO = io.BytesIO()
+        fields:dict[str,str] = fillpdfs.get_form_fields(input_pdf_path=input_pdf_path)
+        data_dict: dict[str, str] = {}
+        for key,val in fields.items():
+            if val:
+                data_dict[key] = get_new_value(pdf_value=val, time_card=time_card, reference_time_card=reference_time_card, phase_sheet=phase_sheet, reference_phase_sheet=reference_phase_sheet, card_info=card_info)
 
-        # load file into memory
-        with open(file=input_pdf_path, mode="rb") as key:
-            key.seek(0)
-            pdf_in_memory.write(key.read())
+        fillpdfs.write_fillable_pdf(input_pdf_path=input_pdf_path, output_pdf_path=output_pdf_path, data_dict=data_dict, flatten=False)
 
-        # create the output file
-        with open(file=output_pdf_path, mode='wb') as output_pdf:
-            reader = pypdf.PdfReader(stream=pdf_in_memory)
-            writer = pypdf.PdfWriter()
-
-            # clone attributes
-            writer.clone_reader_document_root(reader)
-
-            # Loop through pages and look for fields
-            fields: dict[str, Any] | None = reader.get_fields()
-            updates: dict[str, str] = {}
-            if fields:
-                for key in fields:
-                    field: pypdf.generic.Field = fields[key]
-                    field_val: str = ""
-                    if field.value is not None:
-                        field_val = str(object=field.value)
-                        updates[key] = get_new_value(pdf_value=field_val, time_card=time_card, reference_time_card=reference_time_card, phase_sheet=phase_sheet, reference_phase_sheet=reference_phase_sheet, card_info=card_info)
-
-            writer.update_page_form_field_values(page=writer.pages[0], fields=updates, auto_regenerate=False)
-
-            writer.write(stream=output_pdf)
 
         print(f"Updated PDF saved to {output_pdf_path}")
 
