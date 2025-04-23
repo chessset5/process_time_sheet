@@ -1,0 +1,7 @@
+[ ] Do both annotation and field
+    Run twice, once for the field and once for the annotation
+
+[ ] change the defaults somehow...
+    not sure how to do this,,, CRUD method?
+        Create a new text field using all the same data but the default value
+        Set default value to correct value to use.
