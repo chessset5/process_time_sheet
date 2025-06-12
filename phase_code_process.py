@@ -1,14 +1,14 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-'''
- # @ Author: Aaron Shackelford
- # @ Create Time: 2025-03-29 13:34:40
- # @ Modified by: Aaron Shackelford
- # @ Modified time: 2025-03-30 12:36:56
- # @ Description:
+"""
+# @ Author: Aaron Shackelford
+# @ Create Time: 2025-03-29 13:34:40
+# @ Modified by: Aaron Shackelford
+# @ Modified time: 2025-03-30 12:36:56
+# @ Description:
 
- Processes the phase code sheet
- '''
+Processes the phase code sheet
+"""
 
 
 import decimal
@@ -19,10 +19,14 @@ from decimal import Decimal
 import pandas
 
 import workTime
-from helper_functions import (get_phase_code, get_week_day, invalid_date,
-                              name_from_phase_code,
-                              sanitized_first_three_words,
-                              timedelta_to_decimal_hours)
+from helper_functions import (
+    get_phase_code,
+    get_week_day,
+    invalid_date,
+    name_from_phase_code,
+    sanitized_first_three_words,
+    timedelta_to_decimal_hours,
+)
 
 # TODO:
 # [ ] Refactor this into more defined functions
@@ -44,17 +48,25 @@ def process_line(work: workTime.WorkTime) -> dict[str, int | str | Decimal]:
         "description": sanitized_first_three_words(name=name),
         "eqip. no.": "56.1077",
         "phase code": get_phase_code(work.name),
-        "SAT ST": Decimal(value=dec_default), "sat ot": Decimal(value=dec_default),
-        "SUN ST": Decimal(value=dec_default), "sun ot": Decimal(value=dec_default),
-        "MON ST": Decimal(value=dec_default), "mon ot": Decimal(value=dec_default),
-        "TUE ST": Decimal(value=dec_default), "tue ot": Decimal(value=dec_default),
-        "WED ST": Decimal(value=dec_default), "wed ot": Decimal(value=dec_default),
-        "THU ST": Decimal(value=dec_default), "thu ot": Decimal(value=dec_default),
-        "FRI ST": Decimal(value=dec_default), "fri ot": Decimal(value=dec_default),
-        "TOT ST": Decimal(value=dec_default), "tot ot": Decimal(value=dec_default),
+        "SAT ST": Decimal(value=dec_default),
+        "sat ot": Decimal(value=dec_default),
+        "SUN ST": Decimal(value=dec_default),
+        "sun ot": Decimal(value=dec_default),
+        "MON ST": Decimal(value=dec_default),
+        "mon ot": Decimal(value=dec_default),
+        "TUE ST": Decimal(value=dec_default),
+        "tue ot": Decimal(value=dec_default),
+        "WED ST": Decimal(value=dec_default),
+        "wed ot": Decimal(value=dec_default),
+        "THU ST": Decimal(value=dec_default),
+        "thu ot": Decimal(value=dec_default),
+        "FRI ST": Decimal(value=dec_default),
+        "fri ot": Decimal(value=dec_default),
+        "TOT ST": Decimal(value=dec_default),
+        "tot ot": Decimal(value=dec_default),
     }
-    to_st = Decimal(value='0')  # total standard time
-    to_ot = Decimal(value='0')  # total over time
+    to_st = Decimal(value="0")  # total standard time
+    to_ot = Decimal(value="0")  # total over time
     for block in work.work_blocks:
         if invalid_date(block.day):
             continue
@@ -67,16 +79,16 @@ def process_line(work: workTime.WorkTime) -> dict[str, int | str | Decimal]:
         st: Decimal = timedelta_to_decimal_hours(time_delta=block.final_line.total_time)  # standard time
 
         # process to closest 15 min (25% of 60 mins)
-        fractional: Decimal = st % Decimal(value='1')  # 00 . XX
-        percent: Decimal = (fractional % Decimal(value='0.25')) / Decimal(value='0.25')  # to next 25%
+        fractional: Decimal = st % Decimal(value="1")  # 00 . XX
+        percent: Decimal = (fractional % Decimal(value="0.25")) / Decimal(value="0.25")  # to next 25%
         if percent != Decimal(value="0.0"):
             if percent > Decimal(value="0.5"):
                 # move to next 25
-                to_move: Decimal = Decimal(value='1') - percent
-                st += (to_move * Decimal(value='0.25'))
+                to_move: Decimal = Decimal(value="1") - percent
+                st += to_move * Decimal(value="0.25")
             else:
                 # drop to last 25
-                st -= (percent * Decimal(value='0.25'))
+                st -= percent * Decimal(value="0.25")
 
         st = st.normalize()
         ot: Decimal = Decimal(value="0")  # overtime
@@ -185,7 +197,7 @@ def run_phase_sheet(headers: list[str], phase_sheet: pandas.DataFrame) -> pandas
         if idx < 3:
             continue
         values: list[decimal.Decimal] = phase_sheet[col_name].dropna().to_list()
-        if values: # reduce only works if values has values.
+        if values:  # reduce only works if values has values.
             total_line[col_name] = functools.reduce(lambda x, y: x + y, values)
 
     # blank row

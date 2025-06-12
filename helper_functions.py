@@ -1,5 +1,3 @@
-
-
 import json
 import re
 import string
@@ -8,9 +6,9 @@ from datetime import datetime as dt
 from datetime import time, timedelta
 from decimal import Decimal
 
-
 VALIDATE_DATE = True
 DEBUGGING = True
+
 
 def is_minutes_apart(time1: time, time2: time, minutes: int = 30) -> bool:
     """
@@ -105,7 +103,7 @@ def time_string_to_timedelta(time_str: str) -> timedelta:
         timedelta(days=1, hours=6, minutes=45, seconds=10)
     """
     # Split the time string into hours, minutes, and seconds
-    hours, minutes, seconds = map(int, time_str.split(':'))
+    hours, minutes, seconds = map(int, time_str.split(":"))
     # Return a timedelta object with the total time
     return timedelta(hours=hours, minutes=minutes, seconds=seconds)
 
@@ -127,7 +125,8 @@ def timedelta_to_decimal_hours(time_delta: timedelta) -> Decimal:
     """
     # Get total seconds from timedelta and convert to decimal hours
     total_seconds = Decimal(value=str(time_delta.total_seconds()))
-    return total_seconds / Decimal(value='3600.00')  # 3600 seconds in an hour
+    data: Decimal = total_seconds / Decimal(value="3600.00")  # 3600 seconds in an hour
+    return data.normalize()
 
 
 def days_ago(days: int = 5) -> date:
@@ -246,6 +245,7 @@ def name_from_phase_code(phase_code: str) -> str:
     codes: dict[str, str] = {}
     try:
         from envHidden.data.file_locations import PHASECODE_PATH
+
         with open(file=PHASECODE_PATH, mode="r", encoding="utf-8") as f:
             codes = json.load(fp=f)
         if phase_code in codes:
@@ -279,16 +279,16 @@ def remove_phase_code(input_string) -> str:
     pattern = r"\d{2}\.\d{3}\.\d{4}"
 
     # Remove the first occurrence of the matched string
-    result: str = re.sub(pattern=pattern, repl='', string=input_string, count=1)
+    result: str = re.sub(pattern=pattern, repl="", string=input_string, count=1)
 
     return result
 
 
 def sanitized_first_three_words(name: str) -> str:
-    '''
+    """
     sanitizes the name and removes invalid characters and returns the first 3 words
-    '''
-    name = name.encode(encoding='ascii', errors='ignore').decode(encoding='ascii')
+    """
+    name = name.encode(encoding="ascii", errors="ignore").decode(encoding="ascii")
     words: list[str] = name.split()
     first_three: list[str] = list[str]()
     good_chars: set[str] = set(string.ascii_letters + string.digits + "-.")
@@ -304,40 +304,65 @@ def sanitized_first_three_words(name: str) -> str:
 
     return " ".join(first_three)
 
+
 def this_friday() -> date:
-    '''
+    """
     returns this friday. This is inclusive, if today is friday, it will return today.
-    '''
+    """
     today: date = date.today()
-    day_offset_lookup: dict[str, int] = {"Friday": 0, "Saturday": 6, "Sunday": 5, "Monday": 5, "Tuesday": 3, "Wednesday": 2, "Thursday": 1}
+    day_offset_lookup: dict[str, int] = {
+        "Friday": 0,
+        "Saturday": 6,
+        "Sunday": 5,
+        "Monday": 5,
+        "Tuesday": 3,
+        "Wednesday": 2,
+        "Thursday": 1,
+    }
     offset: int = day_offset_lookup[get_week_day(date_obj=today)]
     return today + timedelta(days=offset)
 
+
 def next_friday() -> date:
-    '''
+    """
     returns the next friday
-    '''
+    """
     today: date = date.today()
-    day_offset_lookup: dict[str, int] = {"Friday": 7, "Saturday": 6, "Sunday": 5, "Monday": 5, "Tuesday": 3, "Wednesday": 2, "Thursday": 1}
+    day_offset_lookup: dict[str, int] = {
+        "Friday": 7,
+        "Saturday": 6,
+        "Sunday": 5,
+        "Monday": 5,
+        "Tuesday": 3,
+        "Wednesday": 2,
+        "Thursday": 1,
+    }
     offset: int = day_offset_lookup[get_week_day(date_obj=today)]
     return today + timedelta(days=offset)
 
 
 def last_friday() -> date:
-    '''
+    """
     returns the date of last friday
-    '''
+    """
     today: date = date.today()
-    day_offset_lookup: dict[str, int] = {"Saturday": -1, "Sunday": -2, "Monday": -3, "Tuesday": -4, "Wednesday": -5, "Thursday": -6, "Friday": -7}
+    day_offset_lookup: dict[str, int] = {
+        "Saturday": -1,
+        "Sunday": -2,
+        "Monday": -3,
+        "Tuesday": -4,
+        "Wednesday": -5,
+        "Thursday": -6,
+        "Friday": -7,
+    }
     offset: int = day_offset_lookup[get_week_day(date_obj=today)]
     return today + timedelta(days=offset)
 
 
 def invalid_date(day: date) -> bool:
-    '''
+    """
     Returns True if the date is invalid, else returns false
-    '''
+    """
     if DEBUGGING:
-        return day <= date(year=2025,month=3,day=23) if VALIDATE_DATE else False
+        return day <= date(year=2025, month=3, day=23) if VALIDATE_DATE else False
     return day <= last_friday() if VALIDATE_DATE else False
-

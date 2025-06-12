@@ -1,13 +1,13 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-'''
- # @ Author: Aaron Shackelford
- # @ Create Time: 2025-03-29 13:34:40
- # @ Modified by: Aaron Shackelford
- # @ Modified time: 2025-03-30 12:35:31
- # @ Description:
- processes the time sheet time table
- '''
+"""
+# @ Author: Aaron Shackelford
+# @ Create Time: 2025-03-29 13:34:40
+# @ Modified by: Aaron Shackelford
+# @ Modified time: 2025-03-30 12:35:31
+# @ Description:
+processes the time sheet time table
+"""
 
 
 import os
@@ -18,9 +18,7 @@ from decimal import Decimal
 import pandas
 
 import workTime
-from helper_functions import (get_week_day, invalid_date,
-                              time_diff, time_to_12_string,
-                              timedelta_to_decimal_hours)
+from helper_functions import get_week_day, invalid_date, time_diff, time_to_12_string, timedelta_to_decimal_hours
 
 
 def proc_table(work_list: list[workTime.WorkTime]) -> pandas.DataFrame | None:
@@ -72,7 +70,7 @@ def proc_table(work_list: list[workTime.WorkTime]) -> pandas.DataFrame | None:
         "2nd PM Rest Break (yes)",
         "Time Out (10hr)",
         "Make up hours",
-        ","*len("......................."),
+        "," * len("......................."),
         "hours punched:",
     ]
     time_sheet: dict[str, list[str]] = {}
@@ -104,11 +102,11 @@ def proc_table(work_list: list[workTime.WorkTime]) -> pandas.DataFrame | None:
             if time_diff(cur_punch.end_time, next_punch.start_time) > timedelta(minutes=30):
                 # lunch time
                 if not lunch_out:
-                    lunch_out = (cur_punch.end_time)
-                    lunch_in = (next_punch.start_time)
+                    lunch_out = cur_punch.end_time
+                    lunch_in = next_punch.start_time
                 elif lunch_out and (not second_lunch_out):
-                    second_lunch_out = (cur_punch.end_time)
-                    second_lunch_in = (next_punch.start_time)
+                    second_lunch_out = cur_punch.end_time
+                    second_lunch_in = next_punch.start_time
 
             # redundancy due to my stupidity.
             if not cur_punch in seen_blocks:
@@ -126,7 +124,7 @@ def proc_table(work_list: list[workTime.WorkTime]) -> pandas.DataFrame | None:
         if not cur_punch in seen_blocks:
             total_hours += cur_punch.total_time
             seen_blocks.add(cur_punch)
-        time_out = (cur_punch.end_time)
+        time_out = cur_punch.end_time
 
         # processing work hours more accurately
         hours_worked = timedelta(0)
@@ -183,6 +181,5 @@ def proc_table(work_list: list[workTime.WorkTime]) -> pandas.DataFrame | None:
     md_file: str = os.path.normpath(md_file)
     with open(file=md_file, mode="w", encoding="utf-8") as f:
         f.write(md)
-
 
     return table_df

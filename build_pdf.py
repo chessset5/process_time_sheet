@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-'''
+"""
 # -*- coding: utf-8 -*-
 # @ Author: Aaron Shackelford
 # @ Create Time: 2025-03-30 12:47:16
@@ -9,7 +9,7 @@
 # @ Description:
 
 builds out timecard pdf for user
-'''
+"""
 # @chessset5
 # @Loki-waterAIC
 
@@ -87,10 +87,11 @@ from helper_functions import this_friday
 # | notes         | B.0.10 | B.1.10 | B.2.10 | B.3.10 | B.4.10 | B.5.10 | B.6.10 |
 # '''
 
+
 def __build_reference_time_sheet_data_frame() -> DataFrame:
     """
     returns reference time sheet dataframe
-    """    # setting up data block
+    """  # setting up data block
     header: list[str] = [
         "Sat",
         "Sun",
@@ -111,7 +112,7 @@ def __build_reference_time_sheet_data_frame() -> DataFrame:
         "2nd Lunch In",
         "2nd PM Rest Break (yes)",
         "Time Out (10hr)",
-        "Make up hours"
+        "Make up hours",
     ]
 
     # data
@@ -203,7 +204,7 @@ def __build_reference_phase_code_data_frame() -> DataFrame:
 
 
 def find_df_location(df: pandas.DataFrame, find_value: Any) -> tuple[Any, Any]:
-    '''
+    """
     Find Data Frame Location, returns where a find value is
 
     Args:
@@ -212,13 +213,20 @@ def find_df_location(df: pandas.DataFrame, find_value: Any) -> tuple[Any, Any]:
 
     Returns:
         tuple[Any,Any]: tuple of locations where the value occurs
-    '''
+    """
     locations: list[tuple[Any, Any]] = (df == find_value).stack().loc[lambda x: x].index.tolist()
     return locations[0]
 
 
-def get_new_value(pdf_value: str, time_card: DataFrame, reference_time_card: DataFrame, phase_sheet: DataFrame, reference_phase_sheet: DataFrame, card_info: dict) -> str:
-    '''returns the value based off the reference value
+def get_new_value(
+    pdf_value: str,
+    time_card: DataFrame,
+    reference_time_card: DataFrame,
+    phase_sheet: DataFrame,
+    reference_phase_sheet: DataFrame,
+    card_info: dict,
+) -> str:
+    """returns the value based off the reference value
 
     Args:
         pdf_value (str): target value
@@ -230,7 +238,7 @@ def get_new_value(pdf_value: str, time_card: DataFrame, reference_time_card: Dat
 
     Returns:
         str: replacement string
-    '''
+    """
     if pdf_value in card_info:
         return card_info[pdf_value]
 
@@ -247,7 +255,7 @@ def get_new_value(pdf_value: str, time_card: DataFrame, reference_time_card: Dat
 
 
 def build_out_pdf(phase_sheet: DataFrame, time_card: DataFrame, card_info: dict[str, str]) -> None:
-    '''
+    """
     Creates pdf for user
 
     Args:
@@ -262,31 +270,36 @@ def build_out_pdf(phase_sheet: DataFrame, time_card: DataFrame, card_info: dict[
             Payroll Period Ending: ""
         }
         ```
-    '''
+    """
 
     reference_phase_sheet: DataFrame = __build_reference_phase_code_data_frame()
     reference_time_card: DataFrame = __build_reference_time_sheet_data_frame()
 
     # try to write pdf
     try:
-        from envHidden.data.file_locations import \
-            PDF_PATH  # pylint: disable=C0415
-        from envHidden.envSecret import PDF_FILE_NAME  # pylint: disable=C0415
+        from envHidden.data.file_locations import PDF_PATH  # pylint: disable=C0415
 
         input_pdf_path: str = os.path.normpath(PDF_PATH)
 
-        out_file_name: str = PDF_FILE_NAME.replace("YYYYMMDD", this_friday().strftime("%Y%m%d"))
-        off_set: int = len(PDF_PATH.removesuffix(os.path.basename(PDF_FILE_NAME)))
-        output_pdf_path: str = os.path.normpath(PDF_PATH[:off_set] + out_file_name)
+        out_file_name: str = f"./WMLSI_Timesheet_AARON_SHACKELFORD_{this_friday().strftime("%Y%m%d")}.pdf"
+        output_pdf_path: str = out_file_name
 
-        fields:dict[str,str] = fillpdfs.get_form_fields(input_pdf_path=input_pdf_path)
+        fields: dict[str, str] = fillpdfs.get_form_fields(input_pdf_path=input_pdf_path)
         data_dict: dict[str, str] = {}
-        for key,val in fields.items():
+        for key, val in fields.items():
             if val:
-                data_dict[key] = get_new_value(pdf_value=val, time_card=time_card, reference_time_card=reference_time_card, phase_sheet=phase_sheet, reference_phase_sheet=reference_phase_sheet, card_info=card_info)
+                data_dict[key] = get_new_value(
+                    pdf_value=val,
+                    time_card=time_card,
+                    reference_time_card=reference_time_card,
+                    phase_sheet=phase_sheet,
+                    reference_phase_sheet=reference_phase_sheet,
+                    card_info=card_info,
+                )
 
-        fillpdfs.write_fillable_pdf(input_pdf_path=input_pdf_path, output_pdf_path=output_pdf_path, data_dict=data_dict, flatten=False)
-
+        fillpdfs.write_fillable_pdf(
+            input_pdf_path=input_pdf_path, output_pdf_path=output_pdf_path, data_dict=data_dict, flatten=False
+        )
 
         print(f"Updated PDF saved to {output_pdf_path}")
 

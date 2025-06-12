@@ -6,7 +6,6 @@
 # @ Description: Processes data from WorkTime
 """
 
-
 import copy
 import csv
 import os
@@ -18,13 +17,11 @@ from decimal import Decimal
 import pandas
 
 import workTime
-from helper_functions import (is_valid_date, parse_am_pm_time, parse_date,
-                              time_string_to_timedelta, this_friday)
-from phase_code_process import process_work_times
-from table_process import proc_table
 from build_pdf import build_out_pdf
 from envHidden.envSecret import EMPLOYEE_NAME, EMPLOYEE_NUMBER
-
+from helper_functions import is_valid_date, parse_am_pm_time, parse_date, this_friday, time_string_to_timedelta
+from phase_code_process import process_work_times
+from table_process import proc_table
 
 # pylint: disable=C0301
 # '''
@@ -72,12 +69,12 @@ from envHidden.envSecret import EMPLOYEE_NAME, EMPLOYEE_NUMBER
 
 
 def process_csv_file(csv_file: str) -> workTime.WorkTime:
-    '''
+    """
     process the csv file
-    '''
+    """
     work_time: workTime.WorkTime = workTime.WorkTime()
     not_in_block: bool = True
-    with open(file=csv_file, mode='r', encoding='utf-8') as file:
+    with open(file=csv_file, mode="r", encoding="utf-8") as file:
         csv_reader = csv.reader(file)
         work_block: workTime.WorkBlock = workTime.WorkBlock()
         for index, row in enumerate(csv_reader):
@@ -130,9 +127,9 @@ def process_csv_file(csv_file: str) -> workTime.WorkTime:
 
 
 def process_time_card() -> None:
-    '''
+    """
     make time card
-    '''
+    """
 
     work_times: list[workTime.WorkTime] = list[workTime.WorkTime]()
 
@@ -147,13 +144,13 @@ def process_time_card() -> None:
         work: workTime.WorkTime = process_csv_file(csv_file)
         work_times.append(work)
 
-    table_future:Future = Future()
-    work_future:Future = Future()
+    table_future: Future = Future()
+    work_future: Future = Future()
     with ThreadPoolExecutor() as executor:
-        table_future=executor.submit(proc_table, copy.deepcopy(work_times))
-        work_future=executor.submit(process_work_times, copy.deepcopy(work_times))
+        table_future = executor.submit(proc_table, copy.deepcopy(work_times))
+        work_future = executor.submit(process_work_times, copy.deepcopy(work_times))
 
-    table_df:pandas.DataFrame | None = table_future.result()
+    table_df: pandas.DataFrame | None = table_future.result()
     work_df: pandas.DataFrame | None = work_future.result()
     if table_df is not None and work_df is not None:
         print(table_df.to_markdown())
@@ -164,16 +161,15 @@ def process_time_card() -> None:
             "Employee Name": EMPLOYEE_NAME,
             "Vehicle Number": "",
             "Employee Number": EMPLOYEE_NUMBER,
-            "Payroll Period Ending": this_friday().strftime(format="%m/%d/%Y")
+            "Payroll Period Ending": this_friday().strftime(format="%m/%d/%Y"),
         }
-        build_out_pdf(phase_sheet=work_df,time_card=table_df,card_info=card_info)
-
+        build_out_pdf(phase_sheet=work_df, time_card=table_df, card_info=card_info)
 
 
 def main() -> None:
-    '''
+    """
     main
-    '''
+    """
     process_time_card()
     return
 
